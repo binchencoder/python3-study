@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from def_func import my_abs, power, power1, cal
+from def_func import my_abs, power, power1, cal 
 
 print(max(1, 2, 5, 7))
 
