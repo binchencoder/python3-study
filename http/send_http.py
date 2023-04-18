@@ -27,13 +27,13 @@ class PagerResponse(BaseResponse):
         self.hasNext = hasNext
 
 
-class entityPageItem:
-    def __init__(self, geoType, hasChild, name, entityTypeId, parentId):
-        self.geoType = geoType
-        self.hasChild = hasChild
-        self.name = name
-        self.entityTypeId = entityTypeId
-        self.parentId = parentId
+# class entityPageItem:
+#     def __init__(self, geoType, hasChild, name, entityTypeId, parentId):
+#         self.geoType = geoType
+#         self.hasChild = hasChild
+#         self.name = name
+#         self.entityTypeId = entityTypeId
+#         self.parentId = parentId
 
 # 重写JSONEncoder的default方法，object转换成dict
 
@@ -81,4 +81,7 @@ print("\n===========")
 pagerResponse = json.loads(jsonRes.text, object_hook=customEntityTypeDecoder)
 print(pagerResponse)
 print("\n===========")
-print(pagerResponse.data.data.pop().name)
+
+items = pagerResponse.data.data
+for item in items:
+    print(item.name)
