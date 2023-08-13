@@ -9,9 +9,11 @@ import shutil
 from urllib.parse import urlparse
 
 # 设置日志
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
-                    datefmt='%Y/%m/%d %H:%M:%S')
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
+    datefmt="%Y/%m/%d %H:%M:%S",
+)
 logger = logging.getLogger(__name__)
 
 
@@ -33,7 +35,9 @@ def progress_callback_factory():
         progress = (transferred / total) * 100
         if progress - last_reported[0] >= 1:  # 只有当进度增加了1%时才报告
             last_reported[0] = progress
-            logger.info(f"Downloaded {transferred} out of {total} bytes ({progress:.2f}%)")
+            logger.info(
+                f"Downloaded {transferred} out of {total} bytes ({progress:.2f}%)"
+            )
             # print(f"Downloaded {transferred} out of {total} bytes ({progress:.2f}%)")
 
     return progress_callback
@@ -46,31 +50,38 @@ def download_from_obs(obs_client, bucket_name, obs_key, local_directory):
     print(json.dumps(resp))
     while resp.is_truncated:
         keys += [content.key for content in resp.body.contents]
-        resp = obs_client.listObjects(bucket_name, prefix=obs_key, marker=resp.body.next_marker)
+        resp = obs_client.listObjects(
+            bucket_name, prefix=obs_key, marker=resp.body.next_marker
+        )
     keys += [content.key for content in resp.body.contents]
 
     for key in keys:
-        file_name = key[len(obs_key):]
+        file_name = key[len(obs_key) :]
         if len(file_name) == 0:
-            file_name = os.path.basename(obs_key).split('/')[-1]
+            file_name = os.path.basename(obs_key).split("/")[-1]
         local_file_path = os.path.join(local_directory, file_name)
-        if key.endswith('/'):  # 如果是目录
+        if key.endswith("/"):  # 如果是目录
             if not os.path.exists(local_file_path):
                 os.makedirs(local_file_path)
             continue
         if not os.path.exists(os.path.dirname(local_file_path)):
             os.makedirs(os.path.dirname(local_file_path))
         logger.info(f"Starting to download file {key}")
-        obs_client.downloadFile(bucket_name, key, local_file_path, progressCallback=progress_callback_factory())
+        obs_client.downloadFile(
+            bucket_name,
+            key,
+            local_file_path,
+            progressCallback=progress_callback_factory(),
+        )
         logger.info(f"File {key} downloaded successfully to {local_file_path}")
 
 
 def download_directory_from_obs(
-        s3_path: str,
-        obs_access_key: str,
-        obs_secret_key: str,
-        local_directory: str,
-        endpoint_url: Optional[str] = None,
+    s3_path: str,
+    obs_access_key: str,
+    obs_secret_key: str,
+    local_directory: str,
+    endpoint_url: Optional[str] = None,
 ) -> bool:
     """
     从OBS下载目录中的所有文件到本地
@@ -125,7 +136,7 @@ def download_file_from_http(url, local_directory):
     try:
         with requests.get(url, stream=True) as r:
             r.raise_for_status()
-            with open(local_file_path, 'wb') as f:
+            with open(local_file_path, "wb") as f:
                 shutil.copyfileobj(r.raw, f)
         logger.info(f"File downloaded successfully from {url} to {local_file_path}")
         return True
@@ -134,7 +145,9 @@ def download_file_from_http(url, local_directory):
         return False
 
 
-def download_files_from_links(links, obs_access_key, obs_secret_key, local_directory, endpoint_url=None):
+def download_files_from_links(
+    links, obs_access_key, obs_secret_key, local_directory, endpoint_url=None
+):
     """
     从给定的链接列表中下载所有文件
 
@@ -148,7 +161,9 @@ def download_files_from_links(links, obs_access_key, obs_secret_key, local_direc
     for link in links:
         print(link)
         if link.startswith("s3://"):
-            result = download_directory_from_obs(link, obs_access_key, obs_secret_key, local_directory, endpoint_url)
+            result = download_directory_from_obs(
+                link, obs_access_key, obs_secret_key, local_directory, endpoint_url
+            )
             if not result:
                 return False
         else:
@@ -159,12 +174,14 @@ def download_files_from_links(links, obs_access_key, obs_secret_key, local_direc
 
 
 # 测试函数
-if __name__ == '__main__':
+if __name__ == "__main__":
     download_directory_from_obs(
-        "s3://pie-engine-gpt/gpt-labeling/datasets/78",
+        "s3://pie-engine-gpt/gpt-labeling/datasets/78/",
         "3C0JZGAMQNDW4V79AFNM",
         "dC3JVwrefYyeBvRDnIS8XketdopCQW80E8wpJs9K",
-        "/home/chenbin", "https://obs.cn-north-4.myhuaweicloud.com")
+        "/Volumes/BinchenCoder",
+        "https://obs.cn-north-4.myhuaweicloud.com",
+    )
 
     # 参数解析
     # parser = argparse.ArgumentParser(description='Download directory from OBS.')
