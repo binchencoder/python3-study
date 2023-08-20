@@ -5,8 +5,6 @@ from obs import ObsClient
 import requests
 from typing import Optional
 import argparse
-import shutil
-from urllib.parse import urlparse
 import zipfile
 
 # 设置日志
@@ -105,6 +103,9 @@ def download_directory_from_obs(
             secret_access_key=obs_secret_key,
             server=endpoint_url,
         )
+
+        # obs_client.uploadFile(bucketName=bucket_name, objectKey=)
+
         download_from_obs(obs_client, bucket_name, s3_path, local_directory)
         if s3_path.endswith(".zip"):
             file_path = local_directory + "/" + s3_path.split("/")[-1]
@@ -121,67 +122,6 @@ def download_directory_from_obs(
     except Exception as e:
         logger.error(f"Error while downloading directory from OBS: {e}")
         return False
-
-
-def download_file_from_http(url, local_directory):
-    """
-    从HTTP URL下载文件到本地
-
-    :param url: 文件的HTTP URL
-    :param local_directory: 本地目录路径（文件将被下载到哪里）
-    :return: 若下载成功返回True，否则返回False
-    """
-    # 检查URL是否有效
-    parsed_url = urlparse(url)
-    if not all([parsed_url.scheme, parsed_url.netloc, parsed_url.path]):
-        logger.error(f"Invalid URL: {url}")
-        return False
-
-    # 检查本地目录是否存在，如果不存在则创建
-    if not os.path.exists(local_directory):
-        os.makedirs(local_directory)
-
-    local_filename = os.path.basename(parsed_url.path)
-    local_file_path = os.path.join(local_directory, local_filename)
-
-    try:
-        with requests.get(url, stream=True) as r:
-            r.raise_for_status()
-            with open(local_file_path, "wb") as f:
-                shutil.copyfileobj(r.raw, f)
-        logger.info(f"File downloaded successfully from {url} to {local_file_path}")
-        return True
-    except Exception as e:
-        logger.error(f"Error while downloading file from HTTP: {e}")
-        return False
-
-
-def download_files_from_links(
-    links, obs_access_key, obs_secret_key, local_directory, endpoint_url=None
-):
-    """
-    从给定的链接列表中下载所有文件
-
-    :param links: 包含多个下载链接的列表
-    :param obs_access_key: OBS的access key
-    :param obs_secret_key: OBS的secret key
-    :param local_directory: 本地目录路径（文件将被下载到哪里）
-    :param endpoint_url: OBS服务的endpoint url
-    :return: 若所有文件都下载成功返回True，否则返回False
-    """
-    for link in links:
-        print(link)
-        if link.startswith("s3://"):
-            result = download_directory_from_obs(
-                link, obs_access_key, obs_secret_key, local_directory, endpoint_url
-            )
-            if not result:
-                return False
-        else:
-            result = download_file_from_http(link, local_directory)
-            if not result:
-                return False
-    return True
 
 
 # 测试函数
