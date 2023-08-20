@@ -187,10 +187,17 @@ def download_files_from_links(
 # 测试函数
 if __name__ == "__main__":
     download_directory_from_obs(
+<<<<<<< HEAD
         "s3://pie-engine-gpt/demo/ohmyzsh-master.zip",
         "3C0JZGAMQNDW4V79AFNM",
         "dC3JVwrefYyeBvRDnIS8XketdopCQW80E8wpJs9K",
         "/home/chenbin",
+=======
+        "s3://pie-engine-gpt/gpt-labeling/datasets/78/",
+        "3C0JZGAMQNDW4V79AFNM",
+        "dC3JVwrefYyeBvRDnIS8XketdopCQW80E8wpJs9K",
+        "/Volumes/BinchenCoder",
+>>>>>>> b66be3f36434afb734d8423447db21e43b897220
         "https://obs.cn-north-4.myhuaweicloud.com",
     )
 
