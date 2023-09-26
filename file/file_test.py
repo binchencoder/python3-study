@@ -51,3 +51,5 @@ print(os.path.dirname("/home/chenbin/workspace/技术设计/GPT/metrics.json"))
 print(os.path.basename("/home/chenbin/workspace/技术设计/GPT"))
 print(os.path.abspath("/home/chenbin/workspace/技术设计/GPT/metrics.json"))
 print(os.path.join("root", "test", "runoob.txt"))  # 将目录和文件名合成一个路径
+
+print(os.path.join("/worker/", "aaa"))
