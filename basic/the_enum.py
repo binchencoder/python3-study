@@ -3,6 +3,9 @@
 from enum import Enum
 
 
+# https://blog.csdn.net/ProQianXiao/article/details/113481092
+
+
 class Separator(Enum):
     LINE = 1
     WHITE = 2

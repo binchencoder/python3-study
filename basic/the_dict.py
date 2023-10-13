@@ -6,6 +6,7 @@ Python内置了字典：dict的支持，dict全称dictionary，在其他语言�
 """
 
 d = {"Michael": 95, "Bob": 75, "Tracy": 85}
+
 print(d["Michael"])
 
 """
