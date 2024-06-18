@@ -59,6 +59,12 @@ def remove_directory_file(path):
             shutil.rmtree(itr_file, onerror=file_remove_readonly)
 
 
+def list_file(path):
+    for file in os.listdir(path):
+        print(file)
+
+
 if __name__ == "__main__":
     # remove_dir("/home/chenbin/data/111/")
-    remove_directory("/home/chenbin/data/111/")
+    # remove_directory("/home/chenbin/data/111/")
+    list_file("/home/chenbin/data/112/")
