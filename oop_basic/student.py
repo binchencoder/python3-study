@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+
 class Student(object):
     pass
 
@@ -15,4 +16,4 @@ class Student1(object):
         self.score = score
 
 
-print(Student1('chenbin', "99").name)
+print(Student1("chenbin", "99").name)

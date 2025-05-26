@@ -1,6 +1,9 @@
 # Mac
 .DS_Store
 
+# IDEA
+.idea
+
 # pycache
 */__pycache__/
 
