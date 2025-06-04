@@ -1,2 +1,7 @@
 jiojio
 jionlp
+pandas
+streamlit
+numpy
+scikit-learn
+scikit-surprise
