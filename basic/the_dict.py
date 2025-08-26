@@ -9,6 +9,12 @@ d = {"Michael": 95, "Bob": 75, "Tracy": 85}
 
 print(d["Michael"])
 
+
+def foreach():
+    for k, v in d.items():
+        print(k, v)
+
+
 """
 如果key不存在，dict就会报错：
 
