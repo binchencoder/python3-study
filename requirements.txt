@@ -6,3 +6,4 @@ numpy
 scikit-learn
 scikit-surprise
 no-config
+openpyxl
