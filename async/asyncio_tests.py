@@ -10,21 +10,21 @@ SENTINEL = object()
 # 模拟函数
 async def convert_pdf_to_markdown(pdf_path: Path):
     """将单个 PDF 文件异步转换为 Markdown."""
-    print(f"开始转换 PDF: {pdf_path.name}")
+    print(f">>>>>>>>>>>>>>>>>>>>>>>>开始转换 PDF: {pdf_path.name}")
     # 模拟一个耗时的 I/O 操作
     await asyncio.sleep(10)
     md_path = pdf_path.with_suffix('.md')
     md_path.touch()
-    print(f"PDF 转换完成: {md_path.name}")
+    print(f">>>>>>>>>>>>>>>>>>>>>>>>PDF 转换完成: {md_path.name}")
     return md_path
 
 
 async def extract_tables_from_markdown(md_path: Path):
     """从单个 Markdown 文件中异步提取表格."""
-    print(f"开始提取表格: {md_path.name}")
+    print(f"=======================开始提取表格: {md_path.name}")
     # 模拟一个耗时的 I/O 操作
     await asyncio.sleep(5)
-    print(f"表格提取完成: {md_path.name}")
+    print(f"=======================表格提取完成: {md_path.name}")
 
 
 async def producer(pdf_dir: str, pdf_queue: asyncio.Queue):
@@ -45,6 +45,7 @@ async def pdf_converter_worker(pdf_queue: asyncio.Queue, md_queue: asyncio.Queue
     while True:
         pdf_path = await pdf_queue.get()
         if pdf_path is SENTINEL:
+            pdf_queue.task_done()
             break
 
         md_path = await convert_pdf_to_markdown(pdf_path)
@@ -60,6 +61,7 @@ async def table_extractor_worker(md_queue: asyncio.Queue):
     while True:
         md_path = await md_queue.get()
         if md_path is SENTINEL:
+            md_queue.task_done()
             break
 
         await extract_tables_from_markdown(md_path)
@@ -111,10 +113,10 @@ async def main(pdf_dir: str, num_workers: int):
 
 
 if __name__ == "__main__":
-    test_dir = "/Volumes/BinchenCoder/python_workspace/extractor/pdf-extractor/input"
+    test_dir = "/mnt/work/code/python_workspace /pdf-extractor/input"
     os.makedirs(test_dir, exist_ok=True)
     for i in range(1, 6):
         Path(os.path.join(test_dir, f"file{i}.pdf")).touch()
 
     num_workers = 1
-    asyncio.run(main(test_dir, num_workers))
+    asyncio.run(main(test_dir, num_workers), debug=True)
