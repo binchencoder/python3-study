@@ -23,7 +23,7 @@ async def extract_tables_from_markdown(md_path: Path):
     """从单个 Markdown 文件中异步提取表格."""
     print(f"=======================开始提取表格: {md_path.name}")
     # 模拟一个耗时的 I/O 操作
-    await asyncio.sleep(5)
+    await asyncio.sleep(15)
     print(f"=======================表格提取完成: {md_path.name}")
 
 
@@ -113,7 +113,9 @@ async def main(pdf_dir: str, num_workers: int):
 
 
 if __name__ == "__main__":
-    test_dir = "/mnt/work/code/python_workspace /pdf-extractor/input"
+    # test_dir = "/mnt/work/code/python_workspace/pdf-extractor/input"
+    test_dir = "/Volumes/BinchenCoder/python_workspace/extractor/pdf-extractor/input"
+
     os.makedirs(test_dir, exist_ok=True)
     for i in range(1, 6):
         Path(os.path.join(test_dir, f"file{i}.pdf")).touch()
