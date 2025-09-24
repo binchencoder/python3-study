@@ -1,55 +1,72 @@
-import logging
-import os
+def read_file(filepath: str) -> str:
+    # 检查文件是否存在
+    try:
+        # 如果文件存在，以只读模式打开并读取内容
+        with open(filepath, 'r', encoding='utf-8') as f:
+            file_content = f.read()
+            print(f"文件 '{filepath}' 已存在，正在读取内容...")
+            return file_content
+    except FileNotFoundError as ffe:
+        print(f"发生错误: {ffe}")
+    except Exception as e:
+        # 捕获其他可能的异常（如权限问题等）
+        print(f"发生错误: {e}")
+        return ""
 
-# 设置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
-    datefmt="%Y/%m/%d %H:%M:%S",
-)
-logger = logging.getLogger(__name__)
+
+def write_file(filepath: str, content: str = None) -> str:
+    """
+    如果文件存在，则读取其内容并返回。
+    如果文件不存在，则先创建文件，并写入指定内容，然后返回写入的内容。
+
+    参数:
+        filepath (str): 文件的路径。
+        content (str): 如果文件不存在，要写入的新内容。
+
+    返回:
+        str: 文件内容。
+    """
+    # 检查文件是否存在
+    try:
+        # 如果文件存在，以只读模式打开并读取内容
+        with open(filepath, 'r', encoding='utf-8') as f:
+            file_content = f.read()
+            print(f"文件 '{filepath}' 已存在，正在读取内容...")
+            return file_content
+    except FileNotFoundError:
+        # 如果文件不存在，以写入模式创建文件并写入内容
+        print(f"文件 '{filepath}' 不存在，正在创建并写入内容...")
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(content)
+        # 写入完成后，再次以只读模式打开并返回内容，以确保返回的是磁盘上的实际内容
+        with open(filepath, 'r', encoding='utf-8') as f:
+            return f.read()
+    except Exception as e:
+        # 捕获其他可能的异常（如权限问题等）
+        print(f"发生错误: {e}")
+        return ""
 
 
-"""
-https://www.runoob.com/python/python-os-path.html
-os.path 模块主要用于获取文件的属性
+if __name__ == "__main__":
+    # 示例1: 文件不存在，将创建并写入内容
+    file_path_1 = "example_new_file.txt"
+    new_content = "这是新创建的文件内容。\nHello, World!"
 
-os.path.abspath(path)	返回绝对路径
-os.path.basename(path)	返回文件名
-os.path.commonprefix(list)	返回list(多个路径)中，所有path共有的最长的路径
-os.path.dirname(path)	返回文件路径
-os.path.exists(path)	如果路径 path 存在，返回 True；如果路径 path 不存在或损坏，返回 False。
-os.path.lexists(path)	路径存在则返回 True，路径损坏也返回 True
-os.path.expanduser(path)	把 path 中包含的 ~ 和 ~user 转换成用户目录
-os.path.expandvars(path)	根据环境变量的值替换 path 中包含的 $name 和 ${name}
-os.path.getatime(path)	返回最近访问时间（浮点型秒数）
-os.path.getmtime(path)	返回最近文件修改时间
-os.path.getctime(path)	返回文件 path 创建时间
-os.path.getsize(path)	返回文件大小，如果文件不存在就返回错误
-os.path.isabs(path)	判断是否为绝对路径
-os.path.isfile(path)	判断路径是否为文件
-os.path.isdir(path)	判断路径是否为目录
-os.path.islink(path)	判断路径是否为链接
-os.path.ismount(path)	判断路径是否为挂载点
-os.path.join(path1[, path2[, ...]])	把目录和文件名合成一个路径
-os.path.normcase(path)	转换path的大小写和斜杠
-os.path.normpath(path)	规范path字符串形式
-os.path.realpath(path)	返回path的真实路径
-os.path.relpath(path[, start])	从start开始计算相对路径
-os.path.samefile(path1, path2)	判断目录或文件是否相同
-os.path.sameopenfile(fp1, fp2)	判断fp1和fp2是否指向同一文件
-os.path.samestat(stat1, stat2)	判断stat tuple stat1和stat2是否指向同一个文件
-os.path.split(path)	把路径分割成 dirname 和 basename，返回一个元组
-os.path.splitdrive(path)	一般用在 windows 下，返回驱动器名和路径组成的元组
-os.path.splitext(path)	分割路径，返回路径名和文件扩展名的元组
-os.path.splitunc(path)	把路径分割为加载点与文件
-os.path.walk(path, visit, arg)	遍历path，进入每个目录都调用visit函数，visit函数必须有3个参数(arg, dirname, names)，dirname表示当前目录的目录名，names代表当前目录下的所有文件名，args则为walk的第三个参数
-os.path.supports_unicode_filenames	设置是否支持unicode路径名
-"""
+    print("--- 首次调用：文件不存在 ---")
+    file_content_1 = read_file(file_path_1)
+    print(f"返回的内容是：\n'{file_content_1}'\n")
 
-print(os.path.dirname("/home/chenbin/workspace/技术设计/GPT/metrics.json"))
-print(os.path.basename("/home/chenbin/workspace/技术设计/GPT"))
-print(os.path.abspath("/home/chenbin/workspace/技术设计/GPT/metrics.json"))
-print(os.path.join("root", "test", "runoob.txt"))  # 将目录和文件名合成一个路径
+    # 示例2: 文件已存在，将直接读取内容
+    print("--- 再次调用：文件已存在 ---")
+    file_content_2 = write_file(file_path_1, "这个内容将不会被写入。")
+    print(f"返回的内容是：\n'{file_content_2}'\n")
 
-print(os.path.join("/worker/", "aaa"))
+    # 示例3: 处理多级目录
+    import os
+
+    os.makedirs("data/files", exist_ok=True)  # 确保目录存在
+    file_path_3 = "data/files/another_file.txt"
+
+    print("--- 首次调用：处理多级目录 ---")
+    file_content_3 = write_file(file_path_3, "这是一个在子目录中的文件。")
+    print(f"返回的内容是：\n'{file_content_3}'\n")
