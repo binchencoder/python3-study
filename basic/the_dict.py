@@ -35,6 +35,8 @@ False
 """
 print(d.get("Michael"))
 
+print(d.get("Michael1", "Default Value"))
+
 """
 要删除一个key，用pop(key)方法，对应的value也会从dict中删除：
 """
