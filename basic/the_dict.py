@@ -35,9 +35,9 @@ if 'Thomas' in d:
 """
 二是通过dict提供的get()方法，如果key不存在，可以返回None，或者自己指定的value：
 """
-print(d.get("Michael"))
+print(f'如果key不存在，返回None: {d.get("Michael")}')
+print(f'如果key不存在，返回指定值: {d.get("Michael1", "Default Value")}')
 
-print(d.get("Michael1", "Default Value"))
 
 """
 要删除一个key，用pop(key)方法，对应的value也会从dict中删除：
