@@ -29,6 +29,8 @@ KeyError: 'Thomas'
 >>> 'Thomas' in d
 False
 """
+if 'Thomas' in d:
+    print("'Thomas' in d")
 
 """
 二是通过dict提供的get()方法，如果key不存在，可以返回None，或者自己指定的value：
