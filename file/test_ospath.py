@@ -52,3 +52,18 @@ print(os.path.abspath("/home/chenbin/workspace/技术设计/GPT/metrics.json"))
 print(os.path.join("root", "test", "runoob.txt"))  # 将目录和文件名合成一个路径
 
 print(os.path.join("/worker/", "aaa"))
+
+
+def split_text():
+    path = "/home/user/my.data.file.csv"
+
+    # os.path.splitext() 专门用于分离扩展名
+    base, ext = os.path.splitext(path)
+
+    print(f"完整路径: {path}")
+    print(f"基名部分: {base}")  # /home/user/my.data.file
+    print(f"扩展名部分: {ext}")  # .csv (注意：包含点号)
+
+
+if __name__ == '__main__':
+    split_text()

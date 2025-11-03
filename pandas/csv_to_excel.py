@@ -6,21 +6,35 @@ from io import StringIO
 def csv_to_excel():
     csv = """
     Figure,Year,Region,Legend,Indicator,X,Y,Unit
-    Comparison of Soil P Thresholds across Regions,,Northwest,Agronomic soil P threshold of maize and wheat,Soil available P,Northwest,25,mg kg^-1
-    Comparison of Soil P Thresholds across Regions,,Northwest,Agronomic soil P threshold of rice,Soil available P,Northwest,22,mg kg^-1
-    Comparison of Soil P Thresholds across Regions,,Northwest,Environmental soil P threshold,Soil available P,Northwest,40,mg kg^-1
-    Comparison of Soil P Thresholds across Regions,,Northeast,Agronomic soil P threshold of maize and wheat,Soil available P,Northeast,19,mg kg^-1
-    Comparison of Soil P Thresholds across Regions,,Northeast,Agronomic soil P threshold of rice,Soil available P,Northeast,23,mg kg^-1
-    Comparison of Soil P Thresholds across Regions,,Northeast,Environmental soil P threshold,Soil available P,Northeast,52,mg kg^-1
-    Comparison of Soil P Thresholds across Regions,,Central China,Agronomic soil P threshold of maize and wheat,Soil available P,Central China,25,mg kg^-1
-    Comparison of Soil P Thresholds across Regions,,Central China,Agronomic soil P threshold of rice,Soil available P,Central China,20,mg kg^-1
-    Comparison of Soil P Thresholds across Regions,,Central China,Environmental soil P threshold,Soil available P,Central China,52,mg kg^-1
-    Comparison of Soil P Thresholds across Regions,,Yangtze Plain,Agronomic soil P threshold of maize and wheat,Soil available P,Yangtze Plain,27,mg kg^-1
-    Comparison of Soil P Thresholds across Regions,,Yangtze Plain,Agronomic soil P threshold of rice,Soil available P,Yangtze Plain,19,mg kg^-1
-    Comparison of Soil P Thresholds across Regions,,Yangtze Plain,Environmental soil P threshold,Soil available P,Yangtze Plain,40,mg kg^-1
-    Comparison of Soil P Thresholds across Regions,,South China,Agronomic soil P threshold of maize and wheat,Soil available P,South China,25,mg kg^-1
-    Comparison of Soil P Thresholds across Regions,,South China,Agronomic soil P threshold of rice,Soil available P,South China,25,mg kg^-1
-    Comparison of Soil P Thresholds across Regions,,South China,Environmental soil P threshold,Soil available P,South China,50,mg kg^-1
+    Water Distribution,,,Sulfonamides,f,0.0,0.33,
+    Water Distribution,,,Sulfonamides,f,0.1,0.41,
+    Water Distribution,,,Sulfonamides,f,0.2,0.50,
+    Water Distribution,,,Sulfonamides,f,0.3,0.59,
+    Water Distribution,,,Sulfonamides,f,0.4,0.66,
+    Water Distribution,,,Sulfonamides,f,0.5,0.72,
+    Water Distribution,,,Sulfonamides,f,0.6,0.76,
+    Water Distribution,,,Sulfonamides,f,0.7,0.78,
+    Water Distribution,,,Sulfonamides,f,0.8,0.79,
+    Water Distribution,,,Sulfonamides,f,0.9,0.77,
+    Water Distribution,,,Sulfonamides,f,1.0,0.74,
+    Water Distribution,,,Sulfonamides,f,1.1,0.68,
+    Water Distribution,,,Sulfonamides,f,1.2,0.61,
+    Water Distribution,,,Sulfonamides,f,1.3,0.53,
+    Water Distribution,,,Sulfonamides,f,1.4,0.45,
+    Water Distribution,,,Sulfonamides,f,1.5,0.37,
+    Water Distribution,,,Sulfonamides,f,1.6,0.29,
+    Water Distribution,,,Sulfonamides,f,1.7,0.22,
+    Water Distribution,,,Sulfonamides,f,1.8,0.16,
+    Water Distribution,,,Sulfonamides,f,1.9,0.11,
+    Water Distribution,,,Sulfonamides,f,2.0,0.07,
+    Water Distribution,,,Sulfonamides,f,2.1,0.04,
+    Water Distribution,,,Sulfonamides,f,2.2,0.02,
+    Water Distribution,,,Sulfonamides,f,2.3,0.01,
+    Water Distribution,,,Sulfonamides,f,2.4,0.005,
+    Water Distribution,,,Sulfonamides,f,2.5,0.002,
+    Water Distribution,,,Sulfonamides,f,2.6,0.001,
+    Water Distribution,,,Sulfonamides,f,2.7,0.000,
+    Water Distribution,,,Tetracyclines,f,0.0,0.32,
     """
 
     # read_csv 可以直接读取文件路径，也可以读取文件对象
