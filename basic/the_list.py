@@ -4,6 +4,7 @@
 # https://blog.csdn.net/bang152101/article/details/105702464
 
 from itertools import zip_longest
+from pathlib import Path
 
 
 def opt_list():
@@ -68,6 +69,32 @@ def group_list():
             print(i)
 
 
+def list_comprehension():
+    all_files = list(Path("/Volumes/BinchenCoder/项目/文献自动化提取/测试文件").glob("*.pdf"))
+    print([item.stem for item in all_files])
+
+
+def test_intersection_set():
+    list_a = [1, 2, 3, 4, 5]
+    list_b = [4, 5, 6, 7, 8]
+
+    # 步骤 1: 将列表转换为集合
+    set_a = set(list_a)
+    set_b = set(list_b)
+
+    # 步骤 2: 使用 & 运算符求交集
+    intersection_set = set_a & set_b
+
+    # 步骤 3 (可选): 将结果转回列表
+    intersection_list = list(intersection_set)
+
+    print(f"列表 A: {list_a}")
+    print(f"列表 B: {list_b}")
+    print(f"交集列表: {intersection_list}")
+    # 输出: 交集列表: [4, 5]
+
 if __name__ == '__main__':
     # opt_list()
-    print(group_list())
+    # print(group_list())
+    # list_comprehension()
+    test_intersection_set()
