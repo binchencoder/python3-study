@@ -56,11 +56,11 @@ PROVINCE_MAP = {
 # 格式：{ '2022数据中的列名': ('2017数据中的列名', '统计年鉴中的列名') }
 # 注意：2022数据中的列名可能包含单位 '(1000 hectares)'
 CROP_COLUMN_MAP = {
-    'nonbeans_sown_area(1000 hectares)':('nonbeans_sown_area', ''),
-    'millet_sown_area(1000 hectares)':('millet_sown_area',''),
-    'sorghum_sown_area(1000 hectares)':('sorghum_sown_area','高梁'),
-    'othercereals_sown_area(1000 hectares)':('othercereals','其他杂粮'),
-    'potato_sown_area(1000 hectares)':('potato','薯类'),
+    # 'nonbeans_sown_area(1000 hectares)':('nonbeans_sown_area', ''),
+    # 'millet_sown_area(1000 hectares)':('millet_sown_area',''),
+    # 'sorghum_sown_area(1000 hectares)':('sorghum_sown_area','高梁'),
+    # 'othercereals_sown_area(1000 hectares)':('othercereals','其他杂粮'),
+    # 'potato_sown_area(1000 hectares)':('potato','薯类'),
     'peanut_sown_area(1000 hectares)': ('peanut_sown_area', '花生'),
     'rapeseed_sown_area(1000 hectares)': ('rapeseed_sown_area', '油菜籽'), # 假设要调整油菜籽
     'cotton_sown_area(1000 hectares)': ('cotton_sown_area', '棉花'),      # 假设要调整棉花
@@ -111,8 +111,10 @@ def load_data():
 
         # 4. 清洗数值列
         # 对所有潜在需要调整的作物列进行清洗
-        all_crop_cols = set(CROP_COLUMN_MAP.keys()) | set(col[0] for col in CROP_COLUMN_MAP.values()) | set(
-            col[1] for col in CROP_COLUMN_MAP.values())
+        all_crop_cols = (set(CROP_COLUMN_MAP.keys())
+                         | set(col[0] for col in CROP_COLUMN_MAP.values())
+                         | set(col[1] for col in CROP_COLUMN_MAP.values())
+                        )
 
         for col in all_crop_cols:
             df_2022 = clean_numeric_col(df_2022, col)
