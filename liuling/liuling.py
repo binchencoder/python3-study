@@ -3,8 +3,8 @@ import numpy as np
 import os
 
 # 假设文件路径
-# FILE_NAME = '/Volumes/BinchenCoder/python_workspace/extractor/LIULING/小作物播种面积调整.xlsx'
-FILE_NAME = '/mnt/work/code/extractor/DATA/小作物播种面积调整_.xlsx'
+FILE_NAME = '/Volumes/BinchenCoder/项目/LIULING/小作物播种面积调整.xlsx'
+# FILE_NAME = '/mnt/work/code/extractor/DATA/小作物播种面积调整_.xlsx'
 
 # --- 核心列名常量 ---
 COL_NAME_CITY = 'City'  # 2022/2017数据中的城市列名
