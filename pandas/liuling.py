@@ -12,8 +12,8 @@ COL_NAME_COUNTY = 'County'  # 区县列名
 COL_NAME_PROVINCE = 'Province'
 
 # 调整比例阈值
-RATIO_MIN_1 = 0.95
-RATIO_MAX_1 = 1.05
+RATIO_MIN_1 = 0.99
+RATIO_MAX_1 = 1.01
 RATIO_MIN_2 = 0.90
 RATIO_MAX_2 = 1.10
 
@@ -92,23 +92,23 @@ COL_CROP_NAME_MAP = {
 # 格式：{ '2022数据中的列名': ('2017数据中的列名', '统计年鉴中的列名') }
 # 注意：2022数据中的列名可能包含单位 '(1000 hectares)'
 CROP_COLUMN_MAP = {
-    # 'nonbeans_sown_area(1000 hectares)':('nonbeans_sown_area', ''),
-    # 'millet_sown_area(1000 hectares)':('millet_sown_area',''),
-    # 'sorghum_sown_area(1000 hectares)':('sorghum_sown_area','高梁'),
-    # 'othercereals_sown_area(1000 hectares)':('othercereals','其他杂粮'),
-    # 'potato_sown_area(1000 hectares)':('potato','薯类'),
+    # 'nonbeans_sown_area(1000 hectares)': ('nonbeans_sown_area', ''),
+    'millet_sown_area(1000 hectares)': ('millet_sown_area', '小米'),
+    'sorghum_sown_area(1000 hectares)': ('sorghum_sown_area', '高梁'),
+    'othercereals_sown_area(1000 hectares)': ('othercereals_sown_area', '其他谷物'),
+    'potato_sown_area(1000 hectares)': ('potato_sown_area', '马铃薯'),
     'peanut_sown_area(1000 hectares)': ('peanut_sown_area', '花生'),
     'rapeseed_sown_area(1000 hectares)': ('rapeseed_sown_area', '油菜籽'),  # 假设要调整油菜籽
     'cotton_sown_area(1000 hectares)': ('cotton_sown_area', '棉花'),  # 假设要调整棉花
-    'flax_sown_area(1000 hectares)': ('flax', '麻类'),
-    'sugarcane_sown_area(1000 hectares)': ('sugarcane', '甘蔗'),
-    'sugarbeet_sown_area(1000 hectares)': ('sugarbeet', '甜菜'),
-    'tobacco_sown_area(1000 hectares)': ('tobacco', '烟叶'),
-    'vegetable_sown_area(1000 hectares)': ('vegetable', '蔬菜'),
-    'fruittree_sown_area(1000 hectares)': ('fruittree', '果园'),
-    # 'greenfodder_sown_area(1000 hectares)':('greenfodder',''),
-    # 'managedgrass_sown_area(1000 hectares)':('managedgrass',''),
-    # 'naturalgrass_sown_area(1000 hectares)':('naturalgrass',''),
+    'flax_sown_area(1000 hectares)': ('flax_sown_area', '麻类'),
+    'sugarcane_sown_area(1000 hectares)': ('sugarcane_sown_area', '甘蔗'),
+    'sugarbeet_sown_area(1000 hectares)': ('sugarbeet_sown_area', '甜菜'),
+    'tobacco_sown_area(1000 hectares)': ('tobacco_sown_area', '烟叶'),
+    'vegetable_sown_area(1000 hectares)': ('vegetable_sown_area', '蔬菜'),
+    'fruittree_sown_area(1000 hectares)': ('fruittree_sown_area', '果园'),
+    'greenfodder_sown_area(1000 hectares)': ('greenfodder_sown_area', '青饲料'),
+    'managedgrass_sown_area(1000 hectares)': ('managedgrass_sown_area', '管理草地'),
+    'naturalgrass_sown_area(1000 hectares)': ('naturalgrass_sown_area', '自然草地'),
 
     # 请根据您的实际需求，补充需要进行调整的作物列
 }
@@ -148,10 +148,11 @@ def load_data():
             # rename_cols.update({'地区': 'City_CN'})
             # df_liaoning_ref.rename(columns=rename_cols, inplace=True)
             print(f"注意: 工作表 '辽宁省统计年鉴' 已找到，将用于辽宁省的市级参考。")
-        except ValueError:
+        except ValueError as e:
             print(f"注意: 工作表 '辽宁省统计年鉴' 未找到。所有省份的市级参考值将通过分解国家级数据得到。")
             df_liaoning_ref = pd.DataFrame()
             liaoning_ref_provided = False
+            raise e
 
         # 4. 清洗数值列
         # 对所有潜在需要调整的作物列进行清洗
@@ -175,10 +176,10 @@ def load_data():
 
     except FileNotFoundError as e:
         print(f"错误: 文件未找到，请检查路径是否正确: {e.filename}")
-        raise
+        raise e
     except Exception as e:
         print(f"加载数据时发生错误: {e}")
-        raise
+        raise e
 
 
 def generate_province_statistical_table():
@@ -228,8 +229,10 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
 
             # --- 2. 省份层面检查 (AO20/C8) ---
             AO20 = df_province_data[CROP_2022].sum()
-            C8_series = df_national_ref[df_national_ref[COL_NAME_PROVINCE] == province_cn][CROP_REF]
-            C8 = C8_series.iloc[0] if not C8_series.empty else np.nan
+
+            C8_series = df_national_ref[df_national_ref[COL_NAME_PROVINCE] == province_cn][CROP_REF] \
+                if CROP_REF in df_national_ref.columns else None
+            C8 = C8_series.iloc[0] if C8_series is not None else np.nan
 
             print(f"1. 2022 {province_cn} {CROP_REF} 面积 (区县总和 AO20): {AO20:.4f} 千公顷")
             print(f"   国家统计年鉴 {province_cn} {CROP_REF} 数据 (C8): {C8:.4f} 千公顷")
@@ -305,6 +308,8 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
 
                     log_entry = {
                         'Crop': CROP_REF,
+                        'Crop_2022': CROP_2022,
+                        'Crop_2017': CROP_2017,
                         'Province': province_en,
                         'City': city_name_in_data,
                         'County_Sum (A)': A,
@@ -315,7 +320,7 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
 
                     # 3.3 比例判断与调整
                     if RATIO_MIN_1 <= ratio_city <= RATIO_MAX_1:
-                        log_entry['Status'] = 'No Adjustment (Ratio within 0.95-1.05)'
+                        log_entry['Status'] = 'No Adjustment (Ratio within 0.99-1.01)'
 
                     elif ratio_city < RATIO_MIN_2 or ratio_city > RATIO_MAX_2:
                         log_entry['Status'] = f'Marked (Ratio < {RATIO_MIN_2} or > {RATIO_MAX_2})'
@@ -324,7 +329,8 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
                         log_entry['Status'] = 'Adjustment needed'
 
                         # --- 4. 执行调整 ---
-                        difference = B - A
+                        # difference = B - A
+                        difference = A - B
                         df_city_2022_zero = df_city_data[df_city_data[CROP_2022] == 0]
                         counties_to_adjust = df_city_2022_zero[COL_NAME_COUNTY].tolist()
 
@@ -334,7 +340,8 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
                             (df_2017[COL_NAME_PROVINCE] == province_en) &
                             (df_2017[COL_NAME_COUNTY].isin(counties_to_adjust))
                             ].copy()
-                        S_2017 = df_city_2017_base[CROP_2017].sum()
+
+                        S_2017 = df_city_2017_base[CROP_2017].sum() if CROP_2017 in df_city_2017_base else 0.0
 
                         if S_2017 > 0 and not df_city_2017_base.empty:
                             df_city_2017_base['Adjustment_Ratio'] = df_city_2017_base[CROP_2017] / S_2017
@@ -350,7 +357,7 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
                                             (df_adjusted_all[COL_NAME_PROVINCE] == province_en)
 
                                 # 核心：动态更新 CROP_2022 所在的列
-                                df_adjusted_all.loc[condition, CROP_2022] = adjustment.round(4)
+                                df_adjusted_all.loc[condition, CROP_2022] = round(adjustment, 4)
 
                             # 5. 检查一致性
                             A_new = df_adjusted_all[
@@ -402,16 +409,20 @@ def final_check(df_adjusted_all, df_national_ref, provinces_to_process):
             if province_en != 'Liaoning':
                 continue
 
-            AO20_new = df_adjusted_all[df_adjusted_all[COL_NAME_PROVINCE] == province_en][crop_2022_col].sum()
-            C8_series = df_national_ref[df_national_ref[COL_NAME_PROVINCE] == province_cn][CROP_REF]
+            df_adjusted_province = df_adjusted_all[df_adjusted_all[COL_NAME_PROVINCE] == province_en]
+            AO20_new = df_adjusted_province[crop_2022_col].sum() \
+                if crop_2022_col in df_adjusted_province.columns else 0.0
+
+            df_national_province = df_national_ref[df_national_ref[COL_NAME_PROVINCE] == province_cn]
+            C8_series = df_national_province[CROP_REF] if CROP_REF in df_national_province else pd.Series([])
             C8 = C8_series.iloc[0] if not C8_series.empty else np.nan
 
             if not np.isnan(C8) and C8 > 0:
                 ratio_province_new = AO20_new / C8
                 print(
-                    f"   {province_cn} 调整后总和: {AO20_new:.4f} 千公顷 | 调整后比例 (AO20/C8): {ratio_province_new:.4f}")
+                    f"{province_cn} 调整后总和: {AO20_new:.4f} 千公顷 | 调整后比例 (AO20/C8): {ratio_province_new:.4f}")
             else:
-                print(f"   {province_cn} 调整后总和: {AO20_new:.4f} 千公顷 | C8数据缺失。")
+                print(f"{province_cn} 调整后总和: {AO20_new:.4f} 千公顷 | C8数据缺失。")
 
 
 if __name__ == '__main__':
