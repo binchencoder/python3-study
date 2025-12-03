@@ -432,11 +432,27 @@ def revise(df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017, city_name_
         (df_2017[COL_NAME_COUNTY].isin(counties_to_adjust))
         ].copy()
 
+    df_city_2022_base = df_2022[
+        (df_2022[COL_NAME_CITY] == city_name_in_data) &
+        (df_2022[COL_NAME_PROVINCE] == province_en) &
+        (df_2022[COL_NAME_COUNTY].isin(counties_to_adjust))
+        ].copy()
+
     sum_2017 = df_city_2017_base[crop_2017].sum() if crop_2017 in df_city_2017_base else 0.0
 
     if difference > 0:
+        """
+        计算（A-B) > 0, 做如下调整：
+        按照2022年已有数据比例整体下调到B
+        """
+
         pass
     else:
+        """
+        计算（A-B) < 0, 做如下调整，例如：
+        选择2022年鞍山市花生数据为0或空白的区县对应选择“2017-crop-sown area”表格中2017年相同区县（假设有5个区县a,b,c,d,e 数据分别为1，2，3，4，5）；
+        将（A-B）*1/（1+2+3+4+5）填入2022年鞍山市花生数据中的a区县
+        """
         if sum_2017 > 0 and not df_city_2017_base.empty:
             df_city_2017_base['Adjustment_Ratio'] = df_city_2017_base[crop_2017] / sum_2017
             df_city_2017_base['Adjustment'] = -difference * df_city_2017_base['Adjustment_Ratio']
