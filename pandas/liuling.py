@@ -3,7 +3,8 @@ import numpy as np
 import os
 
 # 假设文件路径
-FILE_NAME = '/Volumes/BinchenCoder/python_workspace/extractor/LIULING/小作物播种面积调整.xlsx'
+# FILE_NAME = '/Volumes/BinchenCoder/python_workspace/extractor/LIULING/小作物播种面积调整.xlsx'
+FILE_NAME = '/mnt/work/code/extractor/DATA/小作物播种面积调整_.xlsx'
 
 # --- 核心列名常量 ---
 COL_NAME_CITY = 'City'  # 2022/2017数据中的城市列名
@@ -16,40 +17,75 @@ RATIO_MAX_1 = 1.05
 RATIO_MIN_2 = 0.90
 RATIO_MAX_2 = 1.10
 
+# 定义需要处理"省统计年鉴"表的列名
+COLS_CITY = [
+    'Province',
+    'City'
+    'nonbeans_sown_area(1000 hectares)',
+    'millet_sown_area(1000 hectares)',
+    'sorghum_sown_area(1000 hectares)',
+    'othercereals_sown_area(1000 hectares)',
+    'potato_sown_area(1000 hectares)',
+    'peanut_sown_area(1000 hectares)',
+    'rapeseed_sown_area(1000 hectares)',
+    'cotton_sown_area(1000 hectares)',
+    'flax_sown_area(1000 hectares)',
+    'sugarcane_sown_area(1000 hectares)',
+    'sugarbeet_sown_area(1000 hectares)',
+    'tobacco_sown_area(1000 hectares)',
+    'vegetable_sown_area(1000 hectares)',
+    'fruittree_sown_area(1000 hectares)',
+    'greenfodder_sown_area(1000 hectares)',
+    'managedgrass_sown_area(1000 hectares)',
+    'naturalgrass_sown_area(1000 hectares)',
+]
+
 # --- 辅助：中英文省份名称映射表 (保持不变) ---
 PROVINCE_MAP = {
-    'Beijing':':北京',
-    'Tianjin':'天津',
-    'Hebei':'河北',
-    'Shanxi':'山西',
-    'Inner Mongolia':'内蒙古',
-    'Liaoning':'辽宁',
-    'Jilin':'吉林',
-    'Heilongjiang':'黑龙江',
-    'Shanghai':'上海',
-    'Jiangsu':'江苏',
-    'Zhejiang':'浙江',
-    'Anhui':'安徽',
-    'Fujian':'福建',
-    'Jiangxi':'江西',
-    'Shandong':'山东',
-    'Henan':'河南',
-    'Hubei':'湖北',
-    'Hunan':'湖南',
-    'Guangdong':'广东',
-    'Guangxi':'广西',
-    'Hainan':'海南',
-    'Chongqing':'重庆',
-    'Sichuan':'四川',
-    'Guizhou':'贵州',
-    'Yunnan':'云南',
-    'Tibet':'西藏',
-    'Shaanxi':'陕西',
-    'Gansu':'甘肃',
-    'Qinghai':'青海',
-    'Ningxia':'宁夏',
-    'Xinjiang':'新疆',
+    'Beijing': ':北京',
+    'Tianjin': '天津',
+    'Hebei': '河北',
+    'Shanxi': '山西',
+    'Inner Mongolia': '内蒙古',
+    'Liaoning': '辽宁',
+    'Jilin': '吉林',
+    'Heilongjiang': '黑龙江',
+    'Shanghai': '上海',
+    'Jiangsu': '江苏',
+    'Zhejiang': '浙江',
+    'Anhui': '安徽',
+    'Fujian': '福建',
+    'Jiangxi': '江西',
+    'Shandong': '山东',
+    'Henan': '河南',
+    'Hubei': '湖北',
+    'Hunan': '湖南',
+    'Guangdong': '广东',
+    'Guangxi': '广西',
+    'Hainan': '海南',
+    'Chongqing': '重庆',
+    'Sichuan': '四川',
+    'Guizhou': '贵州',
+    'Yunnan': '云南',
+    'Tibet': '西藏',
+    'Shaanxi': '陕西',
+    'Gansu': '甘肃',
+    'Qinghai': '青海',
+    'Ningxia': '宁夏',
+    'Xinjiang': '新疆',
     # 请在此处补充您数据中所有省份的映射
+}
+
+COL_CROP_NAME_MAP = {
+    '花生': 'peanut_sown_area(1000 hectares)',
+    '油菜籽': 'rapeseed_sown_area(1000 hectares)',
+    '棉花': 'cotton_sown_area(1000 hectares)',
+    '麻类': 'flax_sown_area(1000 hectares)',
+    '甘蔗': 'sugarcane_sown_area(1000 hectares)',
+    '甜菜': 'sugarbeet_sown_area(1000 hectares)',
+    '烟叶': 'tobacco_sown_area(1000 hectares)',
+    '蔬菜': 'vegetable_sown_area(1000 hectares)',
+    '果园': 'fruittree_sown_area(1000 hectares)',
 }
 
 # --- 关键修改：作物列名映射表 ---
@@ -62,14 +98,14 @@ CROP_COLUMN_MAP = {
     # 'othercereals_sown_area(1000 hectares)':('othercereals','其他杂粮'),
     # 'potato_sown_area(1000 hectares)':('potato','薯类'),
     'peanut_sown_area(1000 hectares)': ('peanut_sown_area', '花生'),
-    'rapeseed_sown_area(1000 hectares)': ('rapeseed_sown_area', '油菜籽'), # 假设要调整油菜籽
-    'cotton_sown_area(1000 hectares)': ('cotton_sown_area', '棉花'),      # 假设要调整棉花
-    'flax_sown_area(1000 hectares)':('flax','麻类'),
-    'sugarcane_sown_area(1000 hectares)':('sugarcane','甘蔗'),
-    'sugarbeet_sown_area(1000 hectares)':('sugarbeet','甜菜'),
-    'tobacco_sown_area(1000 hectares)':('tobacco','烟叶'),
-    'vegetable_sown_area(1000 hectares)':('vegetable','蔬菜'),
-    'fruittree_sown_area(1000 hectares)':('fruittree','果园'),
+    'rapeseed_sown_area(1000 hectares)': ('rapeseed_sown_area', '油菜籽'),  # 假设要调整油菜籽
+    'cotton_sown_area(1000 hectares)': ('cotton_sown_area', '棉花'),  # 假设要调整棉花
+    'flax_sown_area(1000 hectares)': ('flax', '麻类'),
+    'sugarcane_sown_area(1000 hectares)': ('sugarcane', '甘蔗'),
+    'sugarbeet_sown_area(1000 hectares)': ('sugarbeet', '甜菜'),
+    'tobacco_sown_area(1000 hectares)': ('tobacco', '烟叶'),
+    'vegetable_sown_area(1000 hectares)': ('vegetable', '蔬菜'),
+    'fruittree_sown_area(1000 hectares)': ('fruittree', '果园'),
     # 'greenfodder_sown_area(1000 hectares)':('greenfodder',''),
     # 'managedgrass_sown_area(1000 hectares)':('managedgrass',''),
     # 'naturalgrass_sown_area(1000 hectares)':('naturalgrass',''),
@@ -98,11 +134,19 @@ def load_data():
         df_national_ref = pd.read_excel(FILE_NAME, sheet_name="国家统计年鉴小作物种植面积", header=1)
         df_national_ref.rename(columns={'省份': COL_NAME_PROVINCE}, inplace=True)
 
+        # rename_cols = COL_CROP_NAME_MAP.copy()
+        # rename_cols.update({'省份': COL_NAME_PROVINCE})
+        # df_national_ref.rename(columns=rename_cols, inplace=True)
+
         # 3. 尝试加载辽宁省统计年鉴
         liaoning_ref_provided = True
         try:
             df_liaoning_ref = pd.read_excel(FILE_NAME, sheet_name="辽宁省统计年鉴", header=1)
             df_liaoning_ref.rename(columns={'地区': 'City_CN'}, inplace=True)
+
+            # rename_cols = COL_CROP_NAME_MAP.copy()
+            # rename_cols.update({'地区': 'City_CN'})
+            # df_liaoning_ref.rename(columns=rename_cols, inplace=True)
             print(f"注意: 工作表 '辽宁省统计年鉴' 已找到，将用于辽宁省的市级参考。")
         except ValueError:
             print(f"注意: 工作表 '辽宁省统计年鉴' 未找到。所有省份的市级参考值将通过分解国家级数据得到。")
@@ -114,7 +158,7 @@ def load_data():
         all_crop_cols = (set(CROP_COLUMN_MAP.keys())
                          | set(col[0] for col in CROP_COLUMN_MAP.values())
                          | set(col[1] for col in CROP_COLUMN_MAP.values())
-                        )
+                         )
 
         for col in all_crop_cols:
             df_2022 = clean_numeric_col(df_2022, col)
@@ -135,6 +179,10 @@ def load_data():
     except Exception as e:
         print(f"加载数据时发生错误: {e}")
         raise
+
+
+def generate_province_statistical_table():
+    pass
 
 
 def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, df_liaoning_ref, liaoning_ref_provided):
@@ -162,6 +210,8 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
 
         # --- 内层循环：遍历所有省份 ---
         for province_en in provinces_to_process:
+            if province_en != 'Liaoning':
+                continue
 
             province_cn = PROVINCE_MAP.get(province_en)
             if not province_cn:
@@ -192,17 +242,20 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
                 if RATIO_MIN_1 <= ratio_province <= RATIO_MAX_1:
                     print(f"   比例在 [{RATIO_MIN_1}, {RATIO_MAX_1}] 范围内，无需市级调整。")
                     needs_city_adjustment = False
+                    continue
                 else:
                     print(f"   比例不在 [{RATIO_MIN_1}, {RATIO_MAX_1}] 范围内，进行市级调整。")
             else:
                 print("   C8 或 AO20 数据无效，跳过省份级检查，无法进行市级调整。")
                 needs_city_adjustment = False
+                continue
 
             # --- 2.3 确定市级参考数据 (B) ---
             df_city_ref = pd.DataFrame()
 
             # 优先使用提供的辽宁省统计年鉴（仅限辽宁）
-            if liaoning_ref_provided and province_en == 'Liaoning' and not df_liaoning_ref.empty and CROP_REF in df_liaoning_ref.columns:
+            if liaoning_ref_provided and province_en == 'Liaoning' and not df_liaoning_ref.empty:
+                # if CROP_REF in df_liaoning_ref.columns:
                 df_city_ref = df_liaoning_ref.copy()
                 print(f"--- 使用提供的 '辽宁省统计年鉴' {CROP_REF} 数据作为市级参考值 (B)。 ---")
 
@@ -225,8 +278,9 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
                 for city_cn in cities_to_process:
 
                     # 3.1 查找 B
-                    B_series = df_city_ref[df_city_ref['City_CN'] == city_cn][CROP_REF]
-                    B = B_series.iloc[0] if not B_series.empty else 0.0
+                    B_series = df_city_ref[df_city_ref['City_CN'] == city_cn][CROP_REF] \
+                        if CROP_REF in df_city_ref.columns else None
+                    B = B_series.iloc[0] if B_series is not None else 0.0
 
                     # 确定 City 匹配方式
                     city_match_name = city_cn.replace('市', '').replace('地区', '')
@@ -320,15 +374,33 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
     print("#######################################################")
     log_df = pd.DataFrame(all_adjustment_logs)
     print(log_df.to_markdown(index=False))
+    output_log_file_name = '2022_crop_sown_area_adjusted_log.xlsx'
+    log_df.to_excel(output_log_file_name, index=False)
 
     # 最终检查并输出省份总和
-    print("\n--- 3. 最终省份/作物总和检查 ---")
+    print(f"\n\n#######################################################")
+    print(f"### 3. 最终省份/作物总和检查 ###")
+    print(f"#######################################################")
+    final_check(df_adjusted_all, df_national_ref, provinces_to_process)
+
+    # 保存最终结果到 Excel
+    output_file_name = '2022_crop_sown_area_adjusted_all_crops_and_provinces.xlsx'
+    df_adjusted_all.to_excel(output_file_name, index=False)
+    print(f"\n数据处理完成。调整后的数据已保存到文件: {output_file_name}")
+
+    return output_file_name
+
+
+def final_check(df_adjusted_all, df_national_ref, provinces_to_process):
     for crop_2022_col, (_, crop_ref_col) in CROP_COLUMN_MAP.items():
         CROP_REF = crop_ref_col
         print(f"\n--- {CROP_REF} 调整后总和 ---")
         for province_en in provinces_to_process:
             province_cn = PROVINCE_MAP.get(province_en)
-            if not province_cn: continue
+            if not province_cn:
+                continue
+            if province_en != 'Liaoning':
+                continue
 
             AO20_new = df_adjusted_all[df_adjusted_all[COL_NAME_PROVINCE] == province_en][crop_2022_col].sum()
             C8_series = df_national_ref[df_national_ref[COL_NAME_PROVINCE] == province_cn][CROP_REF]
@@ -340,13 +412,6 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
                     f"   {province_cn} 调整后总和: {AO20_new:.4f} 千公顷 | 调整后比例 (AO20/C8): {ratio_province_new:.4f}")
             else:
                 print(f"   {province_cn} 调整后总和: {AO20_new:.4f} 千公顷 | C8数据缺失。")
-
-    # 保存最终结果到 Excel
-    output_file_name = '2022_crop_sown_area_adjusted_all_crops_and_provinces.xlsx'
-    df_adjusted_all.to_excel(output_file_name, index=False)
-    print(f"\n数据处理完成。调整后的数据已保存到文件: {output_file_name}")
-
-    return output_file_name
 
 
 if __name__ == '__main__':
