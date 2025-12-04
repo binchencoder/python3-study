@@ -1,6 +1,17 @@
+import logging
 import pandas as pd
 import numpy as np
 import os
+
+from pathlib import Path
+
+# 设置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
+    datefmt="%Y/%m/%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 
 # 假设文件路径
 # FILE_NAME = '/Volumes/BinchenCoder/项目/LIULING/小作物播种面积调整.xlsx'
@@ -11,6 +22,12 @@ COL_NAME_CITY = 'City'  # 2022/2017数据中的城市列名
 COL_NAME_CITY_CN = 'City_CN'
 COL_NAME_COUNTY = 'County'  # 区县列名
 COL_NAME_PROVINCE = 'Province'
+
+# ADJUST_PROVINCE_CN_NAME = '全省'
+ADJUST_PROVINCE_CN_NAME = '江西省'
+
+# ADJUST_PROVINCE_EN_NAME = 'Liaoning'
+ADJUST_PROVINCE_EN_NAME = 'Jiangxi'
 
 # 调整比例阈值
 RATIO_MIN_PROVINCE = 0.95
@@ -143,19 +160,19 @@ def load_data():
         # df_national_ref.rename(columns=rename_cols, inplace=True)
 
         # 3. 尝试加载辽宁省统计年鉴
-        liaoning_ref_provided = True
+        province_ref_provided = True
         try:
-            df_liaoning_ref = pd.read_excel(FILE_NAME, sheet_name="辽宁省统计年鉴", header=1)
-            df_liaoning_ref.rename(columns={'地区': COL_NAME_CITY_CN}, inplace=True)
+            df_province_ref = pd.read_excel(FILE_NAME, sheet_name="江西省统计年鉴", header=0)
+            df_province_ref.rename(columns={'地区': COL_NAME_CITY_CN}, inplace=True)
 
             # rename_cols = COL_CROP_NAME_MAP.copy()
             # rename_cols.update({'地区': COL_NAME_CITY_CN})
-            # df_liaoning_ref.rename(columns=rename_cols, inplace=True)
+            # df_province_ref.rename(columns=rename_cols, inplace=True)
             print(f"注意: 工作表 '辽宁省统计年鉴' 已找到，将用于辽宁省的市级参考。")
         except ValueError as e:
             print(f"注意: 工作表 '辽宁省统计年鉴' 未找到。所有省份的市级参考值将通过分解国家级数据得到。")
-            df_liaoning_ref = pd.DataFrame()
-            liaoning_ref_provided = False
+            df_province_ref = pd.DataFrame()
+            province_ref_provided = False
             raise e
 
         # 4. 清洗数值列
@@ -169,14 +186,14 @@ def load_data():
             df_2022 = clean_numeric_col(df_2022, col)
             df_2017 = clean_numeric_col(df_2017, col)
             df_national_ref = clean_numeric_col(df_national_ref, col)
-            df_liaoning_ref = clean_numeric_col(df_liaoning_ref, col)
+            df_province_ref = clean_numeric_col(df_province_ref, col)
 
         # 5. 确保 City/Province 列为字符串
         for df in [df_2022, df_2017]:
             df[COL_NAME_CITY] = df[COL_NAME_CITY].astype(str)
             df[COL_NAME_PROVINCE] = df[COL_NAME_PROVINCE].astype(str)
 
-        return df_2022, df_2017, df_national_ref, df_liaoning_ref, liaoning_ref_provided
+        return df_2022, df_2017, df_national_ref, df_province_ref, province_ref_provided
 
     except FileNotFoundError as e:
         print(f"错误: 文件未找到，请检查路径是否正确: {e.filename}")
@@ -190,12 +207,13 @@ def generate_province_statistical_table():
     pass
 
 
-def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, df_liaoning_ref, liaoning_ref_provided):
+def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, df_province_ref, province_ref_provided):
     """循环遍历所有作物和所有省份，执行调整逻辑。"""
 
     # 最终调整后的数据副本 (在每个作物循环开始时创建，以便在 df_2022 上进行操作)
     df_adjusted_all = df_2022.copy()
-    all_adjustment_logs = []
+    all_city_adjustment_logs = []
+    all_province_adjustment_logs = []
 
     # 获取所有需要处理的省份 (英文名)
     provinces_to_process = df_2022[COL_NAME_PROVINCE].unique()
@@ -215,7 +233,7 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
 
         # --- 内层循环：遍历所有省份 ---
         for province_en in provinces_to_process:
-            if province_en != 'Liaoning':
+            if province_en != ADJUST_PROVINCE_EN_NAME:
                 continue
 
             province_cn = PROVINCE_MAP.get(province_en)
@@ -238,8 +256,9 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
                 if crop_REF in df_national_ref.columns else None
             # 国家统计年鉴中如果没有 则从对应省统计年鉴中找对应数据
             if C8_series is None:
-                C8_series = df_liaoning_ref[df_liaoning_ref[COL_NAME_CITY_CN] == "全省"][crop_REF] \
-                    if crop_REF in df_liaoning_ref.columns else None
+                C8_series = df_province_ref[df_province_ref[COL_NAME_CITY_CN] == ADJUST_PROVINCE_CN_NAME][
+                    crop_REF] \
+                    if crop_REF in df_province_ref.columns else None
 
             C8 = C8_series.iloc[0] if C8_series is not None else np.nan
             print(f"1. 2022 {province_cn} {crop_REF} 面积 (区县总和 AO20): {AO20:.4f} 千公顷")
@@ -251,10 +270,24 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
                 print(f"   AO20/C8 比例: {ratio_province:.4f}")
 
                 if RATIO_MIN_PROVINCE <= ratio_province <= RATIO_MAX_PROVINCE:
+                    # AO20/C8结果范围在0.95-1.05之间 不需要调整
                     print(f"   比例在 [{RATIO_MIN_PROVINCE}, {RATIO_MAX_PROVINCE}] 范围内，无需市级调整。")
                     needs_city_adjustment = False
+
+                    all_province_adjustment_logs.append({
+                        'Crop': crop_REF,
+                        'Crop_2022 Col_Name': crop_2022,
+                        'Crop_2017 Col_Name': crop_2017,
+                        COL_NAME_PROVINCE: province_en,
+                        'Crop_2022 Province Sum(AO20)': AO20,
+                        'County Province Sum(C8)': C8,
+                        'AO20/C8 Ratio': ratio_province,
+                        'Status': f'Skipped 【Ratio AO20/C8 = {ratio_province} in ({RATIO_MIN_PROVINCE}-{RATIO_MAX_PROVINCE})】'
+                    })
+
                     # continue
                 else:
+                    # AO20/C8结果范围在0.95-1.05之外, 进行调整
                     print(f"   比例不在 [{RATIO_MIN_PROVINCE}, {RATIO_MAX_PROVINCE}] 范围内，进行市级调整。")
             else:
                 print("   C8 或 AO20 数据无效，跳过省份级检查，无法进行市级调整。")
@@ -265,9 +298,9 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
             df_city_ref = pd.DataFrame()
 
             # 优先使用提供的辽宁省统计年鉴（仅限辽宁）
-            if liaoning_ref_provided and province_en == 'Liaoning' and not df_liaoning_ref.empty:
+            if province_ref_provided and province_en == ADJUST_PROVINCE_EN_NAME and not df_province_ref.empty:
                 # if CROP_REF in df_liaoning_ref.columns:
-                df_city_ref = df_liaoning_ref.copy()
+                df_city_ref = df_province_ref.copy()
                 print(f"--- 使用提供的 '辽宁省统计年鉴' {crop_REF} 数据作为市级参考值 (B)。 ---")
 
             # 其他情况（包括辽宁年鉴缺失时）进行推算
@@ -294,7 +327,7 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
 
                     # 确定 City 匹配方式
                     city_match_name = city_cn.replace('市', '').replace('地区', '')
-                    if province_en == 'Liaoning' and liaoning_ref_provided:
+                    if province_en == ADJUST_PROVINCE_EN_NAME and province_ref_provided:
                         df_city_data = df_province_data[
                             df_province_data[COL_NAME_CITY].str.contains(city_match_name, na=False)
                         ].copy()
@@ -302,7 +335,7 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
                         df_city_data = df_province_data[df_province_data[COL_NAME_CITY] == city_cn].copy()
 
                     if df_city_data.empty or B <= 0:
-                        all_adjustment_logs.append({
+                        all_city_adjustment_logs.append({
                             'Crop': crop_REF,
                             'Crop_2022': crop_2022,
                             'Crop_2017': crop_2017,
@@ -396,7 +429,7 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
                         # else:
                         #     log_entry['Status'] += ' | Adjustment Failed - 2017 base S_2017 is zero or missing.'
 
-                    all_adjustment_logs.append(log_entry)
+                    all_city_adjustment_logs.append(log_entry)
             else:
                 print(f"   {province_cn} {crop_REF} 市级参考数据缺失或不需要调整，跳过市级循环。")
 
@@ -404,10 +437,15 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
     print("\n\n#######################################################")
     print("### 最终处理结果汇总：市级调整日志 (所有作物/所有省份) ###")
     print("#######################################################")
-    log_df = pd.DataFrame(all_adjustment_logs)
-    print(log_df.to_markdown(index=False))
+
     output_log_file_name = '2022_crop_sown_area_adjusted_log.xlsx'
-    log_df.to_excel(output_log_file_name, index=False)
+
+    df_log_city = pd.DataFrame(all_city_adjustment_logs)
+    print(df_log_city.to_markdown(index=False))
+    write_df(df_log_city, output_log_file_name, sheet_name="城市统计年鉴校正日志")
+
+    df_log_province = pd.DataFrame(all_province_adjustment_logs)
+    write_df(df_log_province, output_log_file_name, "省统计年鉴校正日志")
 
     # 最终检查并输出省份总和
     print(f"\n\n#######################################################")
@@ -417,16 +455,81 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
 
     # 保存最终结果到 Excel
     output_file_name = '2022_crop_sown_area_adjusted_all_crops_and_provinces.xlsx'
-    df_adjusted_all.to_excel(output_file_name, index=False)
+
+    # 创建布尔掩码：值不相等（被修改）则为 True，否则为 False
+    # 确保两个 DataFrame 形状和索引一致才能直接比较
+    changed_mask = df_adjusted_all != df_2022
+
+    # 应用样式
+    # ⭐️ 关键：使用 style.apply(func, axis=None) 将整个 DataFrame 传递给函数
+    df_adjusted_result = df_adjusted_all.style.apply(
+        highlight_changed_cells,
+        mask=changed_mask,  # 将掩码作为额外参数传递
+        axis=None  # 告诉 Styler 将整个 DataFrame 传递给函数
+    )
+    # write_df(df_adjusted_result, output_file_name)
+
+    write_df(df_adjusted_all, output_file_name)
     print(f"\n数据处理完成。调整后的数据已保存到文件: {output_file_name}")
 
     return output_file_name
 
 
-def revise(df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017, city_name_in_data, province_en, log_entry):
-    # difference = B - A
-    difference = A - B
+def highlight_changed_cells(df_data, mask, color='red'):
+    """
+    接收 df_new 的数据 (df_data) 和差异掩码 (mask)，
+    返回一个包含 CSS 样式的 DataFrame。
+    """
+    # 使用 numpy.where 根据掩码返回样式字符串或空字符串
+    # 必须返回一个与输入 df_data 形状相同的 DataFrame
+    style_array = np.where(
+        mask.values,
+        f'background-color: {color}; font-weight: bold;',  # 更改过的值应用黄色背景和粗体
+        ''  # 未更改的值返回空字符串（无样式）
+    )
 
+    return pd.DataFrame(
+        style_array,
+        index=df_data.index,
+        columns=df_data.columns
+    )
+
+
+def write_df(df, output_file_name, sheet_name: str = None):
+    if sheet_name == "" or sheet_name is None:
+        sheet_name = "修正数据表"
+
+    excel_file = Path(output_file_name)
+    if excel_file.exists():
+        xls = pd.ExcelFile(excel_file)
+        if sheet_name not in xls.sheet_names:
+            try:
+                with pd.ExcelWriter(output_file_name, engine='openpyxl', mode='a',
+                                    if_sheet_exists='overlay') as writer:  # 注意：需要安装 openpyxl 库
+                    # 关键参数：
+                    # startrow=start_row: 指定从哪一行开始写入数据
+                    # header=header: 控制是否写入表头
+                    df.to_excel(
+                        writer,
+                        sheet_name=sheet_name,
+                        index=False,  # 不写入 Pandas 索引
+                        # startrow=start_row,
+                        # header=header,
+                    )
+
+                    # df.to_excel(writer, sheet_name=f"{sheet_name}", index=False)
+            except PermissionError as e:
+                logger.error(f"❌ 无法写入 {output_file_name}，请确认文件未被占用！{e}")
+                raise e
+            except Exception as e:
+                logger.error(f"❌❌❌❌❌ Failed to write excel {e}")
+                raise e
+    else:
+        df.to_excel(output_file_name, sheet_name=sheet_name, index=False)
+
+
+def revise(df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017, city_name_in_data, province_en, log_entry):
+    difference = A - B
     if difference > 0:
         """
         计算（A-B) > 0, 做如下调整：
@@ -463,7 +566,7 @@ def revise(df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017, city_name_
             log_entry['Status'] += f' | Adjustment Failed - 2022 base city is zero or missing.'
     else:
         """
-        计算（A-B) < 0, 做如下调整，例如：
+        计算（A-B) < 0, 对2022年鞍山市花生数据向上调整，例如：
         选择2022年鞍山市花生数据为0或空白的区县对应选择“2017-crop-sown area”表格中2017年相同区县（假设有5个区县a,b,c,d,e 数据分别为1，2，3，4，5）；
         将（A-B）*1/（1+2+3+4+5）填入2022年鞍山市花生数据中的a区县
         """
@@ -484,21 +587,46 @@ def revise(df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017, city_name_
             df_city_2017_base['Adjustment'] = -difference * df_city_2017_base['Adjustment_Ratio']
 
             # 4. 更新 df_adjusted_all 中的数据
-            for _, row in df_city_2017_base.iterrows():
-                county = row[COL_NAME_COUNTY]
-                adjustment = row['Adjustment']
-
-                condition = (df_adjusted_all[COL_NAME_CITY] == city_name_in_data) & \
-                            (df_adjusted_all[COL_NAME_COUNTY] == county) & \
-                            (df_adjusted_all[COL_NAME_PROVINCE] == province_en)
-
-                # 核心：动态更新 CROP_2022 所在的列
-                df_adjusted_all.loc[condition, crop_2022] = round(adjustment, 4)
-
-            # 5. 检查一致性
-            check_log(df_adjusted_all, B, city_name_in_data, crop_2022, log_entry, province_en)
+            update_crop_data(df_adjusted_all, df_city_2017_base, B, city_name_in_data, crop_2022, province_en,
+                             log_entry)
         else:
-            log_entry['Status'] += f' | Adjustment Failed - 2017 base SUM_2017({sum_2017}) is zero or missing.'
+            """
+            如果2022年鞍山市花生数据有区县不为0的 则对不为0的数据向上调整
+            """
+            df_city_2022_non_zero = df_city_data[df_city_data[crop_2022] != 0]
+            counties_to_adjust = df_city_2022_non_zero[COL_NAME_COUNTY].tolist()
+
+            df_city_2022_base = df_2022[
+                (df_2022[COL_NAME_CITY] == city_name_in_data) &
+                (df_2022[COL_NAME_PROVINCE] == province_en) &
+                (df_2022[COL_NAME_COUNTY].isin(counties_to_adjust))
+                ].copy()
+
+            if not df_city_2022_base.empty:
+                df_city_2022_base['Adjustment_Ratio'] = 1 + -difference / B
+                df_city_2022_base['Adjustment'] = df_city_2022_base[crop_2022] * df_city_2022_base['Adjustment_Ratio']
+
+                # 4. 更新 df_adjusted_all 中的数据
+                update_crop_data(df_adjusted_all, df_city_2022_base, B, city_name_in_data, crop_2022, province_en,
+                                 log_entry)
+
+            # log_entry['Status'] += f' | Adjustment Failed - 2017 base SUM_2017({sum_2017}) is zero or missing.'
+
+
+def update_crop_data(df_adjusted_all, df_city_base, B, city_name_in_data, crop_2022, province_en, log_entry):
+    for _, row in df_city_base.iterrows():
+        county = row[COL_NAME_COUNTY]
+        adjustment = row['Adjustment']
+
+        condition = (df_adjusted_all[COL_NAME_CITY] == city_name_in_data) & \
+                    (df_adjusted_all[COL_NAME_COUNTY] == county) & \
+                    (df_adjusted_all[COL_NAME_PROVINCE] == province_en)
+
+        # 核心：动态更新 CROP_2022 所在的列
+        df_adjusted_all.loc[condition, crop_2022] = round(adjustment, 4)
+
+    # 5. 检查一致性
+    check_log(df_adjusted_all, B, city_name_in_data, crop_2022, log_entry, province_en)
 
 
 def check_log(df_adjusted_all, B, city_name_in_data, crop_2022, log_entry, province_en):
@@ -519,7 +647,7 @@ def final_check(df_adjusted_all, df_national_ref, provinces_to_process):
             province_cn = PROVINCE_MAP.get(province_en)
             if not province_cn:
                 continue
-            if province_en != 'Liaoning':
+            if province_en != ADJUST_PROVINCE_EN_NAME:
                 continue
 
             df_adjusted_province = df_adjusted_all[df_adjusted_all[COL_NAME_PROVINCE] == province_en]
