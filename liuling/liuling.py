@@ -14,8 +14,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # 假设文件路径
-# FILE_NAME = '/Volumes/BinchenCoder/项目/LIULING/小作物播种面积调整.xlsx'
-FILE_NAME = '/mnt/work/code/extractor/DATA/小作物播种面积调整.xlsx'
+FILE_NAME = '/Volumes/BinchenCoder/项目/LIULING/小作物播种面积调整.xlsx'
+# FILE_NAME = '/mnt/work/code/extractor/DATA/小作物播种面积调整.xlsx'
 
 ADJUST_PROVINCE_CN_NAME = '江西省'
 ADJUST_PROVINCE_EN_NAME = 'Jiangxi'
@@ -35,6 +35,9 @@ RATIO_MIN_1 = 0.99
 RATIO_MAX_1 = 1.01
 RATIO_MIN_2 = 0.90
 RATIO_MAX_2 = 1.10
+
+# 保留小数位数
+ROUND_DECIMAL = 5
 
 # 定义需要处理"省统计年鉴"表的列名
 COLS_CITY = [
@@ -411,10 +414,16 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
 
     # 保存最终结果到 Excel
     output_file_name = '2022_crop_sown_area_adjusted_all_crops_and_provinces.xlsx'
+    df_adjusted_result = mask_changed(df_2022, df_adjusted_all)
+    write_df(df_adjusted_result, output_file_name)
 
-    # 创建布尔掩码：值不相等（被修改）则为 True，否则为 False
-    # 确保两个 DataFrame 形状和索引一致才能直接比较
+    # write_df(df_adjusted_all, output_file_name)
+    print(f"\n数据处理完成。调整后的数据已保存到文件: {output_file_name}")
 
+    return output_file_name
+
+
+def mask_changed(df_2022, df_adjusted_all) -> pd.DataFrame:
     all_crop_cols = (set(CROP_COLUMN_MAP.keys())
                      | set(col[0] for col in CROP_COLUMN_MAP.values())
                      | set(col[1] for col in CROP_COLUMN_MAP.values())
@@ -423,36 +432,53 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
     for col in all_crop_cols:
         df_adjusted_all = clean_numeric_col(df_adjusted_all, col)
 
-    changed_mask = df_adjusted_all != df_2022
+    # 生成差异布尔掩码，并排除 NaN ---
+    # 步骤 a: 找出所有不相等的值 (包括 NaN 引起的不相等)
+    changed_mask = (df_adjusted_all != df_2022)
+    # 步骤 b: 找出 df_new 中非 NaN 的值
+    not_na_mask = df_adjusted_all.notna()
+    # 步骤 c: 结合两个掩码：必须是不相等 (changed_mask) 且在新数据中不能是 NaN (not_na_mask)
+    # 只有当一个值发生了变化 **并且** 这个新的值不是 NaN 时，才将它标记为 True
+    final_mask = changed_mask & not_na_mask
+
+    # 针对字符串/对象类型列进行更细致的 NaN 比较
+    # 对于字符串，空字符串 '' 和 NaN 应该被视为不等，但 NaN 和 NaN 应该相等
+    # for col in df_2022.select_dtypes(include=['object']).columns:
+    #     mask_na_both = df_2022[col].isna() & df_adjusted_all[col].isna()
+    #     mask_diff = (df_2022[col] != df_adjusted_all[col]) | (df_2022[col].isna() != df_adjusted_all[col].isna())
+    #     final_mask[col] = mask_diff & ~mask_na_both
 
     # 应用样式
     # ⭐️ 关键：使用 style.apply(func, axis=None) 将整个 DataFrame 传递给函数
     df_adjusted_result = df_adjusted_all.style.apply(
         highlight_changed_cells,
-        mask=changed_mask,  # 将掩码作为额外参数传递
-        axis=None  # 告诉 Styler 将整个 DataFrame 传递给函数
+        mask=final_mask,  # 将布尔掩码作为关键字参数传递
+        axis=None,  # 确保函数作用于整个表格
+        color='lightcoral'  # 使用更醒目的颜色进行标记
     )
-    # write_df(df_adjusted_result, output_file_name)
-
-    write_df(df_adjusted_all, output_file_name)
-    print(f"\n数据处理完成。调整后的数据已保存到文件: {output_file_name}")
-
-    return output_file_name
+    return df_adjusted_result
 
 
 def highlight_changed_cells(df_data, mask, color='red'):
     """
-    接收 df_new 的数据 (df_data) 和差异掩码 (mask)，
-    返回一个包含 CSS 样式的 DataFrame。
+    df_data: Styler.apply(axis=None) 传递的整个 df_new 数据。
+    mask: 预先计算好的布尔掩码 (changed_mask)。
     """
-    # 使用 numpy.where 根据掩码返回样式字符串或空字符串
-    # 必须返回一个与输入 df_data 形状相同的 DataFrame
+    # 确保掩码和数据对齐
+    if not df_data.equals(mask):
+        # 这一步通常是为了确保传入的 df_data 和 mask 具有相同的形状、索引和列名
+        # 在实际应用中，如果数据源保证了对齐，则可以跳过此检查。
+        pass
+
+    # 使用 numpy.where 基于 mask 的值来决定应用样式还是空字符串
+    # 必须使用 .values 来处理底层的 numpy 数组，效率最高
     style_array = np.where(
         mask.values,
         f'background-color: {color}; font-weight: bold;',  # 更改过的值应用黄色背景和粗体
         ''  # 未更改的值返回空字符串（无样式）
     )
 
+    # 样式函数必须返回一个具有相同索引和列的 DataFrame
     return pd.DataFrame(
         style_array,
         index=df_data.index,
@@ -510,8 +536,8 @@ def revise(df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017, city_name_
             ].copy()
 
         if not df_city_2022_base.empty:
-            df_city_2022_base['Adjustment_Ratio'] = 1 - difference / A
-            df_city_2022_base['Adjustment'] = df_city_2022_base[crop_2022] * df_city_2022_base['Adjustment_Ratio']
+            df_city_2022_base['Adjustment_Ratio'] = round(1 - difference / A, ROUND_DECIMAL)
+            df_city_2022_base['Adjustment'] = round(df_city_2022_base[crop_2022] * df_city_2022_base['Adjustment_Ratio'], ROUND_DECIMAL)
 
             # 4. 更新 df_adjusted_all 中的数据
             for _, row in df_city_2022_base.iterrows():
@@ -523,7 +549,7 @@ def revise(df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017, city_name_
                             (df_adjusted_all[COL_NAME_PROVINCE] == province_en)
 
                 # 核心：动态更新 CROP_2022 所在的列
-                df_adjusted_all.loc[condition, crop_2022] = round(adjustment, 4)
+                df_adjusted_all.loc[condition, crop_2022] = round(adjustment, ROUND_DECIMAL)
 
                 # 5. 检查一致性
                 check_log(df_adjusted_all, B, city_name_in_data, crop_2022, log_entry, province_en)
@@ -548,8 +574,8 @@ def revise(df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017, city_name_
         sum_2017 = df_city_2017_base[crop_2017].sum() if crop_2017 in df_city_2017_base else 0.0
 
         if sum_2017 > 0 and not df_city_2017_base.empty:
-            df_city_2017_base['Adjustment_Ratio'] = df_city_2017_base[crop_2017] / sum_2017
-            df_city_2017_base['Adjustment'] = -difference * df_city_2017_base['Adjustment_Ratio']
+            df_city_2017_base['Adjustment_Ratio'] = round(df_city_2017_base[crop_2017] / sum_2017, ROUND_DECIMAL)
+            df_city_2017_base['Adjustment'] = round(-difference * df_city_2017_base['Adjustment_Ratio'], ROUND_DECIMAL)
 
             # 4. 更新 df_adjusted_all 中的数据
             update_crop_data(df_adjusted_all, df_city_2017_base, B, city_name_in_data, crop_2022, province_en,
@@ -568,8 +594,11 @@ def revise(df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017, city_name_
                 ].copy()
 
             if not df_city_2022_base.empty:
-                df_city_2022_base['Adjustment_Ratio'] = 1 + -difference / B
-                df_city_2022_base['Adjustment'] = df_city_2022_base[crop_2022] * df_city_2022_base['Adjustment_Ratio']
+                # df_city_2022_base['Adjustment_Ratio'] = round(1 + -difference / B, ROUND_DECIMAL)
+                # df_city_2022_base['Adjustment'] = round(df_city_2022_base[crop_2022] * df_city_2022_base['Adjustment_Ratio'], ROUND_DECIMAL)
+
+                df_city_2022_base['Adjustment_Ratio'] = round(df_city_2022_base[crop_2022] / A, ROUND_DECIMAL)
+                df_city_2022_base['Adjustment'] = round(df_city_2022_base[crop_2022] + (-difference * df_city_2022_base['Adjustment_Ratio']), ROUND_DECIMAL)
 
                 # 4. 更新 df_adjusted_all 中的数据
                 update_crop_data(df_adjusted_all, df_city_2022_base, B, city_name_in_data, crop_2022, province_en,
@@ -588,7 +617,7 @@ def update_crop_data(df_adjusted_all, df_city_base, B, city_name_in_data, crop_2
                     (df_adjusted_all[COL_NAME_PROVINCE] == province_en)
 
         # 核心：动态更新 CROP_2022 所在的列
-        df_adjusted_all.loc[condition, crop_2022] = round(adjustment, 4)
+        df_adjusted_all.loc[condition, crop_2022] = round(adjustment, ROUND_DECIMAL)
 
     # 5. 检查一致性
     check_log(df_adjusted_all, B, city_name_in_data, crop_2022, log_entry, province_en)
