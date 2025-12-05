@@ -393,6 +393,7 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
 
     df_log_city = pd.DataFrame(all_city_adjustment_logs)
     print(df_log_city.to_markdown(index=False))
+
     # 定义另一个样式函数：为特定字符串设置绿色背景和白色字体
     def highlight_status(val):
         if 'Error' in val:
@@ -563,6 +564,31 @@ def update_crop_data(df_adjusted_all, df_city_base, B, city_name_in_data, crop_2
         df_adjusted_all.loc[condition, crop_2022] = round(adjustment, ROUND_DECIMAL)
 
 
+def final_check(df_adjusted_all, df_national_ref, provinces_to_process):
+    for crop_2022_col, (_, crop_ref_col) in CROP_COLUMN_MAP.items():
+        crop_ref = crop_ref_col
+        print(f"\n--- {crop_ref} 调整后总和 ---")
+        for province_en in provinces_to_process:
+            province_cn = PROVINCE_MAP.get(province_en)
+            if not province_cn:
+                continue
+
+            df_adjusted_province = df_adjusted_all[df_adjusted_all[COL_NAME_PROVINCE] == province_en]
+            AO20_new = df_adjusted_province[crop_2022_col].sum() \
+                if crop_2022_col in df_adjusted_province.columns else 0.0
+
+            df_national_province = df_national_ref[df_national_ref[COL_NAME_PROVINCE] == province_cn]
+            C8_series = df_national_province[crop_ref] if crop_ref in df_national_province else pd.Series([])
+            C8 = C8_series.iloc[0] if not C8_series.empty else np.nan
+
+            if not np.isnan(C8) and C8 > 0:
+                ratio_province_new = AO20_new / C8
+                print(
+                    f"{province_cn} 调整后总和: {AO20_new:.4f} 千公顷 | 调整后比例 (AO20/C8): {ratio_province_new:.4f}")
+            else:
+                print(f"{province_cn} 调整后总和: {AO20_new:.4f} 千公顷 | C8数据缺失。")
+
+
 def check_log(df_adjusted_all, B, city_name_in_data, crop_2022, log_entry, province_en):
     A_new = df_adjusted_all[
         (df_adjusted_all[COL_NAME_CITY] == city_name_in_data) &
@@ -684,31 +710,6 @@ def write_df(df, output_file_name, sheet_name: str = None):
     # 保存调整后的Excel文件
     wb.save(excel_file)
     wb.close()
-
-
-def final_check(df_adjusted_all, df_national_ref, provinces_to_process):
-    for crop_2022_col, (_, crop_ref_col) in CROP_COLUMN_MAP.items():
-        crop_ref = crop_ref_col
-        print(f"\n--- {crop_ref} 调整后总和 ---")
-        for province_en in provinces_to_process:
-            province_cn = PROVINCE_MAP.get(province_en)
-            if not province_cn:
-                continue
-
-            df_adjusted_province = df_adjusted_all[df_adjusted_all[COL_NAME_PROVINCE] == province_en]
-            AO20_new = df_adjusted_province[crop_2022_col].sum() \
-                if crop_2022_col in df_adjusted_province.columns else 0.0
-
-            df_national_province = df_national_ref[df_national_ref[COL_NAME_PROVINCE] == province_cn]
-            C8_series = df_national_province[crop_ref] if crop_ref in df_national_province else pd.Series([])
-            C8 = C8_series.iloc[0] if not C8_series.empty else np.nan
-
-            if not np.isnan(C8) and C8 > 0:
-                ratio_province_new = AO20_new / C8
-                print(
-                    f"{province_cn} 调整后总和: {AO20_new:.4f} 千公顷 | 调整后比例 (AO20/C8): {ratio_province_new:.4f}")
-            else:
-                print(f"{province_cn} 调整后总和: {AO20_new:.4f} 千公顷 | C8数据缺失。")
 
 
 if __name__ == '__main__':
