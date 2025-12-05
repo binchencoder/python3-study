@@ -1,10 +1,14 @@
 checker:
-  input_file: /mnt/work/code/extractor/DATA/小作物播种面积调整-13省.xlsx
-  output_log_file: /mnt/work/code/extractor/DATA/2022_crop_sown_area_adjusted_log.xlsx
-  output_adjusted_file: /mnt/work/code/extractor/DATA/2022_crop_sown_area_adjusted_all_crops_and_provinces.xlsx
+#  input_file: /mnt/work/code/extractor/DATA/小作物播种面积调整-13省.xlsx
+#  output_log_file: /mnt/work/code/extractor/DATA/2022_crop_sown_area_adjusted_log.xlsx
+#  output_adjusted_file: /mnt/work/code/extractor/DATA/2022_crop_sown_area_adjusted_all_crops_and_provinces.xlsx
+
+  input_file: /Volumes/BinchenCoder/项目/LIULING/小作物播种面积调整-13省.xlsx
+  output_log_file: /Volumes/BinchenCoder/项目/LIULING/2022_crop_sown_area_adjusted_log.xlsx
+  output_adjusted_file: /Volumes/BinchenCoder/项目/LIULING/2022_crop_sown_area_adjusted_all_crops_and_provinces.xlsx
 
   # 所有数值保留小数位数
-  ROUND_DECIMAL: 5
+  ROUND_DECIMAL: 4
 
 ratio:
   # 调整比例阈值
@@ -15,5 +19,7 @@ ratio:
   RATIO_MAX_1: 1.01
   RATIO_MIN_2: 0.90
   RATIO_MAX_2: 1.10
+  RATIO_MAX_3: 1.50
+
 
 

@@ -1,9 +1,10 @@
 import logging
-import pandas as pd
-import numpy as np
-import os
-
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
+from openpyxl import load_workbook
+
 from config import Configuration
 
 # 设置日志
@@ -337,7 +338,7 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
 
                     city_name_in_data = df_city_data[COL_NAME_CITY].iloc[0]
                     A = df_city_data[crop_2022].sum()
-                    ratio_city = A / B
+                    AB_ratio = A / B
 
                     log_entry = {
                         'Crop': crop_REF,
@@ -347,31 +348,35 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
                         'City': city_name_in_data,
                         '2022 County_Sum (A)': A,
                         'Ref_Data (B)': B,
-                        '2017 County_Sum': None,
-                        'A/B Ratio': ratio_city,
+                        '2017 County_Sum': 0,
+                        'A/B Ratio': AB_ratio,
                         'Status': ''
                     }
 
                     # 3.3 比例判断与调整
-                    if RATIO_MIN_1 <= ratio_city <= RATIO_MAX_1:
+                    if RATIO_MIN_1 <= AB_ratio <= RATIO_MAX_1:
                         # 比例范围在0.99-1.01之间, 无需调整
-                        log_entry['Status'] = f'No Adjustment 【Ratio({ratio_city}) within 0.99-1.01】'
+                        log_entry['Status'] = f'No Adjustment 【Ratio({AB_ratio}) within 0.99-1.01】'
 
-                    elif ratio_city < RATIO_MIN_2 or ratio_city > RATIO_MAX_2:
-                        # 比例范围在<0.9 或 >1.1 范围内, 标记该市
+                    elif AB_ratio < RATIO_MIN_2 or AB_ratio > RATIO_MAX_2:
+                        # 比例范围在<0.9 或 >1.1 范围内
                         if B > 1.0:
-                            log_entry[
-                                'Status'] = f'Marked 【Ratio({ratio_city}) < {RATIO_MIN_2} or > {RATIO_MAX_2}】, B={B}'
-                        elif B < 1.0 and -0.5 < (A - B) < 0.5:
-                            log_entry['Status'] = f'Adjustment needed 【B({B})<1.0 and -0.5 < A-B({A - B}) < 0.5】'
-                            # --- 4. 执行调整 ---
-                            revise(df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017, city_name_in_data,
-                                   province_en, log_entry)
+                            revise_by_where(AB_ratio, df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017,
+                                            city_name_in_data, province_en, log_entry)
+                        else:
+                            if B < 1.0 and -0.5 < (A - B) < 0.5:
+                                log_entry['Status'] = f'Adjustment needed 【B({B})<1.0 and -0.5 < A-B({A - B}) < 0.5】'
+                                # --- 4. 执行调整 ---
+                                revise(df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017, city_name_in_data,
+                                       province_en, log_entry)
+                            else:
+                                revise_by_where(AB_ratio, df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017,
+                                                city_name_in_data, province_en, log_entry)
 
-                    elif RATIO_MIN_2 <= ratio_city < RATIO_MIN_1 or RATIO_MAX_1 < ratio_city <= RATIO_MAX_2:
+                    elif RATIO_MIN_2 <= AB_ratio < RATIO_MIN_1 or RATIO_MAX_1 < AB_ratio <= RATIO_MAX_2:
                         # 比例范围在0.9-0.99，1.01-1.1之内, 进行如下调整
                         log_entry[
-                            'Status'] = f'Adjustment needed 【Ratio({ratio_city}) in ({RATIO_MIN_2}-{RATIO_MIN_1}) or ({RATIO_MAX_1}-{RATIO_MAX_2})】'
+                            'Status'] = f'Adjustment needed 【Ratio({AB_ratio}) in ({RATIO_MIN_2}-{RATIO_MIN_1}) or ({RATIO_MAX_1}-{RATIO_MAX_2})】'
                         # --- 4. 执行调整 ---
                         revise(df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017, city_name_in_data,
                                province_en, log_entry)
@@ -388,7 +393,22 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
 
     df_log_city = pd.DataFrame(all_city_adjustment_logs)
     print(df_log_city.to_markdown(index=False))
-    write_df(df_log_city, output_log_file, sheet_name="城市统计年鉴校正日志")
+    # 定义另一个样式函数：为特定字符串设置绿色背景和白色字体
+    def highlight_status(val):
+        if 'Error' in val:
+            # 设置背景为红色
+            return 'background-color: red;'
+        elif 'But 2017 base is zero or missing' in val:
+            # 设置背景为黄色
+            return 'background-color: yellow'
+        return ''
+
+    # 应用样式到 Styler 对象
+    df_styled_log = df_log_city.style.map(
+        highlight_status,  # 应用到整个 DataFrame，检查负数
+        subset=['Status']  # 仅应用于Status列
+    )
+    write_df(df_styled_log, output_log_file, sheet_name="城市统计年鉴校正日志")
 
     df_log_province = pd.DataFrame(all_province_adjustment_logs)
     write_df(df_log_province, output_log_file, sheet_name="省统计年鉴校正日志")
@@ -405,6 +425,157 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
     print(f"\n数据处理完成。调整后的数据已保存到文件: {output_adjusted_file}")
 
     return output_adjusted_file
+
+
+def revise_by_where(AB_ratio, df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017, city_name_in_data, province_en,
+                    log_entry):
+    # 如果 A/B < 0.9, 执行步骤三调整
+    if AB_ratio < RATIO_MIN_2:
+        # --- 4. 执行调整 ---
+        log_entry[
+            'Status'] = f'Adjustment needed 【B({B})>1.0 and Ratio({AB_ratio}) < {RATIO_MIN_2}】'
+        revise(df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017, city_name_in_data,
+               province_en, log_entry)
+
+    # 如果 A/B > 1.1, 按条件调整
+    elif AB_ratio > RATIO_MAX_2:
+        #  如果 A/B > 1.1 && < 1.5
+        if RATIO_MAX_3 > AB_ratio > RATIO_MAX_2:
+            # 当2022年的数据中都有值则调整, 否则标记
+            df_city_2022_zero = df_city_data[df_city_data[crop_2022] == 0]
+            if df_city_2022_zero.empty:
+                log_entry[
+                    'Status'] = f'Adjustment needed 【B({B})>1.0 and {RATIO_MAX_3} > Ratio({AB_ratio}) > {RATIO_MAX_2}】'
+                revise(df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017,
+                       city_name_in_data, province_en, log_entry)
+            else:
+                log_entry[
+                    'Status'] = f'Marked 【Ratio({AB_ratio}) < {RATIO_MAX_3} and > {RATIO_MAX_2}, But 2022 base has zero'
+        #  如果 A/B >= 1.5 报错
+        elif AB_ratio >= RATIO_MAX_3:
+            log_entry['Status'] = f'Error |【Ratio({AB_ratio}) >= {RATIO_MAX_3}】'
+
+
+def revise(df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017, city_name_in_data, province_en, log_entry):
+    difference = A - B
+    if difference > 0:
+        """
+        计算（A-B) > 0, 做如下调整：
+        按照2022年已有数据比例整体下调到B
+        """
+        df_city_2022_non_zero = df_city_data[df_city_data[crop_2022] != 0]
+        counties_to_adjust = df_city_2022_non_zero[COL_NAME_COUNTY].tolist()
+
+        df_city_2022_base = df_2022[
+            (df_2022[COL_NAME_CITY] == city_name_in_data) &
+            (df_2022[COL_NAME_PROVINCE] == province_en) &
+            (df_2022[COL_NAME_COUNTY].isin(counties_to_adjust))
+            ].copy()
+
+        if not df_city_2022_base.empty:
+            df_city_2022_base['Adjustment_Ratio'] = round(1 - difference / A, ROUND_DECIMAL)
+            df_city_2022_base['Adjustment'] = round(
+                df_city_2022_base[crop_2022] * df_city_2022_base['Adjustment_Ratio'], ROUND_DECIMAL)
+
+            # 4. 更新 df_adjusted_all 中的数据
+            for _, row in df_city_2022_base.iterrows():
+                update_crop_data(df_adjusted_all, df_city_2022_base, B, city_name_in_data, crop_2022, province_en,
+                                 log_entry)
+        else:
+            log_entry['Status'] += f' | Adjustment Failed - 2022 base city is zero or missing.'
+    else:
+        """
+        计算（A-B) < 0, 对2022年鞍山市花生数据向上调整，例如：
+        选择2022年鞍山市花生数据为0或空白的区县对应选择“2017-crop-sown area”表格中2017年相同区县（假设有5个区县a,b,c,d,e 数据分别为1，2，3，4，5）；
+        将（A-B）*1/（1+2+3+4+5）填入2022年鞍山市花生数据中的a区县
+        """
+        df_city_2022_zero = df_city_data[df_city_data[crop_2022] == 0]
+        counties_to_adjust = df_city_2022_zero[COL_NAME_COUNTY].tolist()
+
+        # 2. 匹配 2017 年数据 (注意使用 CROP_2017 列名)
+        df_city_2017_base = df_2017[
+            (df_2017[COL_NAME_CITY] == city_name_in_data) &
+            (df_2017[COL_NAME_PROVINCE] == province_en) &
+            (df_2017[COL_NAME_COUNTY].isin(counties_to_adjust))
+            ].copy()
+
+        sum_2017 = df_city_2017_base[crop_2017].sum() if crop_2017 in df_city_2017_base else 0.0
+        log_entry['2017 County_Sum'] += sum_2017
+
+        if sum_2017 == 0:
+            log_entry['Status'] += f"| But 2017 base is zero or missing."
+            return
+
+        elif sum_2017 > 0 and not df_city_2017_base.empty:
+            df_city_2017_base['Adjustment_Ratio'] = round(df_city_2017_base[crop_2017] / sum_2017, ROUND_DECIMAL)
+            df_city_2017_base['Adjustment'] = round(-difference * df_city_2017_base['Adjustment_Ratio'], ROUND_DECIMAL)
+
+            # df_city_2017_base['Adjustment_Ratio'] = round(df_city_2017_base[crop_2017] / sum_2017, ROUND_DECIMAL)
+            # if sum_2017 - B > 0:
+            #     df_city_2017_base['Adjustment'] = round(-difference * df_city_2017_base['Adjustment_Ratio'], ROUND_DECIMAL)
+            # else:
+            #     df_city_2017_base['Adjustment'] = round(difference * df_city_2017_base['Adjustment_Ratio'], ROUND_DECIMAL)
+
+            # 4. 更新 df_adjusted_all 中的数据
+            update_crop_data(df_adjusted_all, df_city_2017_base, B, city_name_in_data, crop_2022, province_en,
+                             log_entry)
+        else:
+            """
+            如果2022年鞍山市花生数据有区县不为0的 则对不为0的数据向上调整
+            """
+            df_city_2022_non_zero = df_city_data[df_city_data[crop_2022] != 0]
+            counties_to_adjust = df_city_2022_non_zero[COL_NAME_COUNTY].tolist()
+
+            df_city_2022_base = df_2022[
+                (df_2022[COL_NAME_CITY] == city_name_in_data) &
+                (df_2022[COL_NAME_PROVINCE] == province_en) &
+                (df_2022[COL_NAME_COUNTY].isin(counties_to_adjust))
+                ].copy()
+
+            if not df_city_2022_base.empty:
+                # df_city_2022_base['Adjustment_Ratio'] = round(1 + -difference / B, ROUND_DECIMAL)
+                # df_city_2022_base['Adjustment'] = round(df_city_2022_base[crop_2022] * df_city_2022_base['Adjustment_Ratio'], ROUND_DECIMAL)
+
+                df_city_2022_base['Adjustment_Ratio'] = round(df_city_2022_base[crop_2022] / A, ROUND_DECIMAL)
+                df_city_2022_base['Adjustment'] = round(
+                    df_city_2022_base[crop_2022] + (-difference * df_city_2022_base['Adjustment_Ratio']), ROUND_DECIMAL)
+
+                # 4. 更新 df_adjusted_all 中的数据
+                update_crop_data(df_adjusted_all, df_city_2022_base, B, city_name_in_data, crop_2022, province_en,
+                                 log_entry)
+
+                # log_entry['Status'] += f' | Adjustment Failed - 2017 base SUM_2017({sum_2017}) is zero or missing.'
+
+    # 5. 检查修改后与修改前的结果一致性
+    check_log(df_adjusted_all, B, city_name_in_data, crop_2022, log_entry, province_en)
+
+
+def update_crop_data(df_adjusted_all, df_city_base, B, city_name_in_data, crop_2022, province_en, log_entry):
+    for _, row in df_city_base.iterrows():
+        county = row[COL_NAME_COUNTY]
+        adjustment = row['Adjustment']
+
+        condition = (df_adjusted_all[COL_NAME_CITY] == city_name_in_data) & \
+                    (df_adjusted_all[COL_NAME_COUNTY] == county) & \
+                    (df_adjusted_all[COL_NAME_PROVINCE] == province_en)
+
+        # 核心：动态更新 CROP_2022 所在的列
+        df_adjusted_all.loc[condition, crop_2022] = round(adjustment, ROUND_DECIMAL)
+
+
+def check_log(df_adjusted_all, B, city_name_in_data, crop_2022, log_entry, province_en):
+    A_new = df_adjusted_all[
+        (df_adjusted_all[COL_NAME_CITY] == city_name_in_data) &
+        (df_adjusted_all[COL_NAME_PROVINCE] == province_en)
+        ][crop_2022].sum()
+
+    A_new = round(A_new, ROUND_DECIMAL)
+    B = round(B, ROUND_DECIMAL)
+    logger.info(
+        f"{province_en} / {city_name_in_data} {crop_2022} | Check (New A/B) = ( {A_new} / {B} = {A_new / B} )")
+
+    log_entry['Check (New A/B)'] = f"{A_new} / {B} = {A_new / B}"
+    log_entry['Status'] += f" | Adjusted. New Sum: {A_new}"
 
 
 def mask_changed(df_2022, df_adjusted_all) -> pd.DataFrame:
@@ -501,124 +672,18 @@ def write_df(df, output_file_name, sheet_name: str = None):
     else:
         df.to_excel(output_file_name, sheet_name=sheet_name, index=False)
 
+    # 使用openpyxl加载刚才保存的Excel文件
+    wb = load_workbook(excel_file)
+    ws = wb.active
 
-def revise(df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017, city_name_in_data, province_en, log_entry):
-    difference = A - B
-    if difference > 0:
-        """
-        计算（A-B) > 0, 做如下调整：
-        按照2022年已有数据比例整体下调到B
-        """
-        df_city_2022_non_zero = df_city_data[df_city_data[crop_2022] != 0]
-        counties_to_adjust = df_city_2022_non_zero[COL_NAME_COUNTY].tolist()
+    # 自适应调整列宽
+    for column_cells in ws.columns:
+        length = max(len(str(cell.value)) for cell in column_cells if cell.value is not None)
+        ws.column_dimensions[column_cells[0].column_letter].width = length + 2  # 可以根据需要调整额外的宽度
 
-        df_city_2022_base = df_2022[
-            (df_2022[COL_NAME_CITY] == city_name_in_data) &
-            (df_2022[COL_NAME_PROVINCE] == province_en) &
-            (df_2022[COL_NAME_COUNTY].isin(counties_to_adjust))
-            ].copy()
-
-        if not df_city_2022_base.empty:
-            df_city_2022_base['Adjustment_Ratio'] = round(1 - difference / A, ROUND_DECIMAL)
-            df_city_2022_base['Adjustment'] = round(
-                df_city_2022_base[crop_2022] * df_city_2022_base['Adjustment_Ratio'], ROUND_DECIMAL)
-
-            # 4. 更新 df_adjusted_all 中的数据
-            for _, row in df_city_2022_base.iterrows():
-                update_crop_data(df_adjusted_all, df_city_2022_base, B, city_name_in_data, crop_2022, province_en,
-                                 log_entry)
-        else:
-            log_entry['Status'] += f' | Adjustment Failed - 2022 base city is zero or missing.'
-    else:
-        """
-        计算（A-B) < 0, 对2022年鞍山市花生数据向上调整，例如：
-        选择2022年鞍山市花生数据为0或空白的区县对应选择“2017-crop-sown area”表格中2017年相同区县（假设有5个区县a,b,c,d,e 数据分别为1，2，3，4，5）；
-        将（A-B）*1/（1+2+3+4+5）填入2022年鞍山市花生数据中的a区县
-        """
-        df_city_2022_zero = df_city_data[df_city_data[crop_2022] == 0]
-        counties_to_adjust = df_city_2022_zero[COL_NAME_COUNTY].tolist()
-
-        # 2. 匹配 2017 年数据 (注意使用 CROP_2017 列名)
-        df_city_2017_base = df_2017[
-            (df_2017[COL_NAME_CITY] == city_name_in_data) &
-            (df_2017[COL_NAME_PROVINCE] == province_en) &
-            (df_2017[COL_NAME_COUNTY].isin(counties_to_adjust))
-            ].copy()
-
-        sum_2017 = df_city_2017_base[crop_2017].sum() if crop_2017 in df_city_2017_base else 0.0
-        # log_entry['2017 County_Sum'] = sum_2017
-
-        if sum_2017 > 0 and not df_city_2017_base.empty:
-            # df_city_2017_base['Adjustment_Ratio'] = round(df_city_2017_base[crop_2017] / sum_2017, ROUND_DECIMAL)
-            # df_city_2017_base['Adjustment'] = round(-difference * df_city_2017_base['Adjustment_Ratio'], ROUND_DECIMAL)
-
-            df_city_2017_base['Adjustment_Ratio'] = round(df_city_2017_base[crop_2017] / A, ROUND_DECIMAL)
-            if sum_2017 - B > 0:
-                df_city_2017_base['Adjustment'] = round(
-                    df_city_2017_base[crop_2017] - (-difference * df_city_2017_base['Adjustment_Ratio']), ROUND_DECIMAL)
-            else:
-                df_city_2017_base['Adjustment'] = round(
-                    df_city_2017_base[crop_2017] + (-difference * df_city_2017_base['Adjustment_Ratio']), ROUND_DECIMAL)
-
-            # 4. 更新 df_adjusted_all 中的数据
-            update_crop_data(df_adjusted_all, df_city_2017_base, B, city_name_in_data, crop_2022, province_en,
-                             log_entry)
-        else:
-            """
-            如果2022年鞍山市花生数据有区县不为0的 则对不为0的数据向上调整
-            """
-            df_city_2022_non_zero = df_city_data[df_city_data[crop_2022] != 0]
-            counties_to_adjust = df_city_2022_non_zero[COL_NAME_COUNTY].tolist()
-
-            df_city_2022_base = df_2022[
-                (df_2022[COL_NAME_CITY] == city_name_in_data) &
-                (df_2022[COL_NAME_PROVINCE] == province_en) &
-                (df_2022[COL_NAME_COUNTY].isin(counties_to_adjust))
-                ].copy()
-
-            if not df_city_2022_base.empty:
-                # df_city_2022_base['Adjustment_Ratio'] = round(1 + -difference / B, ROUND_DECIMAL)
-                # df_city_2022_base['Adjustment'] = round(df_city_2022_base[crop_2022] * df_city_2022_base['Adjustment_Ratio'], ROUND_DECIMAL)
-
-                df_city_2022_base['Adjustment_Ratio'] = round(df_city_2022_base[crop_2022] / A, ROUND_DECIMAL)
-                df_city_2022_base['Adjustment'] = round(
-                    df_city_2022_base[crop_2022] + (-difference * df_city_2022_base['Adjustment_Ratio']), ROUND_DECIMAL)
-
-                # 4. 更新 df_adjusted_all 中的数据
-                update_crop_data(df_adjusted_all, df_city_2022_base, B, city_name_in_data, crop_2022, province_en,
-                                 log_entry)
-
-                # log_entry['Status'] += f' | Adjustment Failed - 2017 base SUM_2017({sum_2017}) is zero or missing.'
-
-    # 5. 检查修改后与修改前的结果一致性
-    check_log(df_adjusted_all, B, city_name_in_data, crop_2022, log_entry, province_en)
-
-
-def update_crop_data(df_adjusted_all, df_city_base, B, city_name_in_data, crop_2022, province_en, log_entry):
-    for _, row in df_city_base.iterrows():
-        county = row[COL_NAME_COUNTY]
-        adjustment = row['Adjustment']
-
-        condition = (df_adjusted_all[COL_NAME_CITY] == city_name_in_data) & \
-                    (df_adjusted_all[COL_NAME_COUNTY] == county) & \
-                    (df_adjusted_all[COL_NAME_PROVINCE] == province_en)
-
-        # 核心：动态更新 CROP_2022 所在的列
-        df_adjusted_all.loc[condition, crop_2022] = round(adjustment, ROUND_DECIMAL)
-
-
-def check_log(df_adjusted_all, B, city_name_in_data, crop_2022, log_entry, province_en):
-    A_new = df_adjusted_all[
-        (df_adjusted_all[COL_NAME_CITY] == city_name_in_data) &
-        (df_adjusted_all[COL_NAME_PROVINCE] == province_en)
-        ][crop_2022].sum()
-
-    A_new = round(A_new, 4)
-    logger.info(
-        f"{province_en} / {city_name_in_data} {crop_2022} | Check (New A/B) = ( {A_new:.4f} / {B:.4f} = {A_new / B:.4f} )")
-
-    log_entry['Check (New A/B)'] = f"{A_new:.4f} / {B:.4f} = {A_new / B:.4f}"
-    log_entry['Status'] += f" | Adjusted. New Sum: {A_new:.5f}"
+    # 保存调整后的Excel文件
+    wb.save(excel_file)
+    wb.close()
 
 
 def final_check(df_adjusted_all, df_national_ref, provinces_to_process):
@@ -666,6 +731,7 @@ if __name__ == '__main__':
     RATIO_MAX_1 = _config.ratio['RATIO_MAX_1']
     RATIO_MIN_2 = _config.ratio['RATIO_MIN_2']
     RATIO_MAX_2 = _config.ratio['RATIO_MAX_2']
+    RATIO_MAX_3 = _config.ratio['RATIO_MAX_3']
 
     # --- 运行主程序 ---
     try:
