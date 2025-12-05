@@ -700,12 +700,12 @@ def write_df(df, output_file_name, sheet_name: str = None):
 
     # 使用openpyxl加载刚才保存的Excel文件
     wb = load_workbook(excel_file)
-    ws = wb.active
-
-    # 自适应调整列宽
-    for column_cells in ws.columns:
-        length = max(len(str(cell.value)) for cell in column_cells if cell.value is not None)
-        ws.column_dimensions[column_cells[0].column_letter].width = length + 2  # 可以根据需要调整额外的宽度
+    for sheet in wb.sheetnames:
+        ws = wb[sheet]
+        # 自适应调整列宽
+        for column_cells in ws.columns:
+            length = max(len(str(cell.value)) for cell in column_cells if cell.value is not None)
+            ws.column_dimensions[column_cells[0].column_letter].width = length + 2  # 可以根据需要调整额外的宽度
 
     # 保存调整后的Excel文件
     wb.save(excel_file)
