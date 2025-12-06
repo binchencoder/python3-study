@@ -8,7 +8,7 @@ checker:
   output_adjusted_file: /Volumes/BinchenCoder/项目/LIULING/2022_crop_sown_area_adjusted_all_crops_and_provinces.xlsx
 
   # 所有数值保留小数位数
-  ROUND_DECIMAL: 4
+  ROUND_DECIMAL: 6
 
 ratio:
   # 调整比例阈值
