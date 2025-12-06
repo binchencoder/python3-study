@@ -232,200 +232,11 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
             print(f"开始处理 {crop_REF} 在省份: {province_cn} ({province_en}) 的数据")
             print(f"=======================================================")
 
-            # 过滤出 2022 年当前省份的所有区县数据
-            # 注意：此处使用 df_adjusted_all，确保上一省份/作物调整的结果得以保留
-            df_province_data = df_adjusted_all[df_adjusted_all[COL_NAME_PROVINCE] == province_en].copy()
-
-            # --- 2. 省份层面检查 (AO20/C8) ---
-            AO20 = df_province_data[crop_2022].sum()
-            df_2017_province = df_2017[df_2017[COL_NAME_PROVINCE] == province_en]
-            AO20_2017 = df_2017_province[crop_2017_col].sum() if crop_2017 in df_2017_province else None
-
-            C8_series = df_national_ref[df_national_ref[COL_NAME_PROVINCE] == province_cn][crop_REF] \
-                if crop_REF in df_national_ref.columns else None
-            # 国家统计年鉴中如果没有 则从对应省统计年鉴中找对应数据
-            if C8_series is None or C8_series.empty:
-                _df_province = df_province_ref[df_province_ref[COL_NAME_PROVINCE] == province_cn]
-                if not _df_province.empty:
-                    C8_series = _df_province[crop_REF] if crop_REF in df_province_ref.columns else None
-
-            C8 = C8_series.iloc[0] if C8_series is not None and not C8_series.empty else np.nan
-            print(f"1. 2022 {province_cn} {crop_REF} 面积 (区县总和 AO20): {AO20:.4f} 千公顷")
-            print(f"   国家统计年鉴 {province_cn} {crop_REF} 数据 (C8): {C8:.4f} 千公顷")
-
-            ratio_province = AO20 / C8 if AO20 > 0 and C8 > 0 else 0
-
-            log_province_entry = {
-                'Crop   ': crop_REF,
-                'Crop_2022 Col_Name': crop_2022,
-                'Crop_2017 Col_Name': crop_2017,
-                COL_NAME_PROVINCE + "   ": province_en,
-                'County Province Sum(AO20)': AO20,
-                '2017 County Province Sum(AO20)': AO20_2017,
-                'National Province Ref(C8)': C8,
-                'AO20/C8 Ratio': ratio_province,
-                'Status': '',
-            }
-
-            needs_city_adjustment = True
-            if not np.isnan(C8) and C8 > 0 and AO20 > 0:
-                print(f"   AO20/C8 比例: {ratio_province:.4f}")
-
-                if RATIO_MIN_PROVINCE <= ratio_province <= RATIO_MAX_PROVINCE:
-                    # AO20/C8结果范围在0.95-1.05之间 不需要调整
-                    print(f"   比例在 [{RATIO_MIN_PROVINCE}, {RATIO_MAX_PROVINCE}] 范围内，无需市级调整。")
-                    needs_city_adjustment = False
-
-                    log_province_entry[
-                        "Status"] = f'Skipped 【Ratio AO20/C8 = {ratio_province} in ({RATIO_MIN_PROVINCE}-{RATIO_MAX_PROVINCE})】'
-
-                    # continue
-                else:
-                    # AO20/C8结果范围在0.95-1.05之外, 进行调整
-                    print(f"   比例不在 [{RATIO_MIN_PROVINCE}, {RATIO_MAX_PROVINCE}] 范围内，进行市级调整。")
-                    log_province_entry[
-                        "Status"] = f'比例不在 [{RATIO_MIN_PROVINCE}, {RATIO_MAX_PROVINCE}] 范围内，进行市级调整。'
-            # else:
-            #     print("   C8 或 AO20 数据无效，跳过省份级检查，无法进行市级调整。")
-            #     needs_city_adjustment = False
-            #     log_province_entry["Status"] = f'C8 或 AO20 数据无效，跳过省份级检查，无法进行市级调整。'
-            # continue
-
-            # --- 2.3 确定市级参考数据 (B) ---
-            _df_city_ref = pd.DataFrame
-
-            # 优先使用提供的各省统计年鉴
-            if province_ref_provided and not df_province_ref.empty:
-                # if CROP_REF in df_liaoning_ref.columns:
-                _df_city_ref = df_province_ref.copy()
-                print(f"--- 使用提供的 '{province_cn}统计年鉴' {crop_REF} 数据作为市级参考值 (B)。 ---")
-
-            # 其他情况（包括辽宁年鉴缺失时）进行推算
-            # elif needs_city_adjustment:
-            #     # 推算逻辑：按 2022 区县数据中的城市占比分解 C8
-            #     print(f"--- 缺乏市级年鉴数据，根据2022区县数据比例分解 C8 ({province_cn}) ---")
-            #
-            #     df_city_sums = df_province_data.groupby(COL_NAME_CITY)[crop_2022].sum().reset_index()
-            #     df_city_sums['Weight'] = df_city_sums[crop_2022] / AO20
-            #     df_city_sums[crop_REF] = df_city_sums['Weight'] * C8
-            #     _df_city_ref = df_city_sums.rename(columns={COL_NAME_CITY: 'City_CN'})[['City_CN', crop_REF]]
-
-            df_city_ref = _df_city_ref[_df_city_ref[COL_NAME_PROVINCE] == province_cn]
-            # --- 3. 市级调整逻辑 (统一使用 df_city_ref) ---
-            if needs_city_adjustment and not df_city_ref.empty:
-                cities_to_process = [c for c in df_city_ref['City_CN'].unique() if
-                                     c not in ['全省', '地区', 'nan', np.nan, province_cn]]
-
-                for city_cn in cities_to_process:
-                    # # 3.1 查找 B
-                    # B_series = df_city_ref[df_city_ref['City_CN'] == city_cn][crop_REF] \
-                    #     if crop_REF in df_city_ref.columns else None
-                    # B = B_series.iloc[0] if B_series is not None else 0.0
-                    #
-                    # # 确定 City 匹配方式
-                    # city_match_name = city_cn
-                    # # city_match_name = city_cn.replace('市', '').replace('地区', '')
-                    # if province_ref_provided:
-                    #     df_city_data = df_province_data[
-                    #         df_province_data[COL_NAME_CITY].str.contains(city_match_name, na=False)
-                    #     ].copy()
-                    # else:
-                    #     df_city_data = df_province_data[df_province_data[COL_NAME_CITY] == city_cn].copy()
-                    #
-                    # A = 0
-                    # city_name_in_data = None
-                    # if not df_city_data.empty:
-                    #     city_name_in_data = df_city_data[COL_NAME_CITY].iloc[0]
-                    #     A = df_city_data[crop_2022].sum()
-                    #
-                    # df_city_2017_base = df_2017[
-                    #     (df_2017[COL_NAME_CITY] == city_name_in_data) &
-                    #     (df_2017[COL_NAME_PROVINCE] == province_en)
-                    #     ].copy()
-                    # sum_2017 = df_city_2017_base[crop_2017].sum() if crop_2017 in df_city_2017_base else 0.0
-                    #
-                    # AB_ratio = A / B if B != 0 else 0.0
-                    # log_city_entry = {
-                    #     'Crop    ': crop_REF,
-                    #     'Crop_2022': crop_2022,
-                    #     'Crop_2017': crop_2017,
-                    #     'Province': province_en,
-                    #     'City        ': city_name_in_data,
-                    #     '2022 County_Sum (A)': A,
-                    #     'Ref_Data (B)': B,
-                    #     '2017 County_Sum': sum_2017,
-                    #     'A/B Ratio': AB_ratio,
-                    #     'Status': ''
-                    # }
-                    #
-                    # if df_city_data.empty or (A <= 0 and B <= 0 and sum_2017 <= 0):
-                    #     log_city_entry['Status'] = 'Skipped 【A and B and sum_2017 is zero/missing】'
-                    #     all_city_adjustment_logs.append(log_city_entry)
-                    #     continue
-                    #
-                    # if B <= 0:
-                    #     """
-                    #     查询2022年表中数值为0的区县, 并对应这些区县找到2017年表中不为0的数据 填充到2022年的表格中
-                    #     """
-                    #     df_city_2022_zero = df_city_data[df_city_data[crop_2022] == 0].copy()
-                    #     counties_to_adjust = df_city_2022_zero[COL_NAME_COUNTY].tolist()
-                    #
-                    #     df_city_2017_non_zero = df_city_2017_base[
-                    #         (df_city_2017_base[crop_2017] != 0) &
-                    #         (df_city_2017_base[COL_NAME_COUNTY].isin(counties_to_adjust))
-                    #         ]
-                    #     if not df_city_2022_zero.empty and not df_city_2017_non_zero.empty:
-                    #         df_city_2022_zero['Adjustment'] = df_city_2017_non_zero[crop_2017]
-                    #         for _, row in df_city_2022_zero.iterrows():
-                    #             county = row[COL_NAME_COUNTY]
-                    #             adjustment = row['Adjustment']
-                    #             condition = (df_adjusted_all[COL_NAME_CITY] == city_name_in_data) & \
-                    #                         (df_adjusted_all[COL_NAME_COUNTY] == county) & \
-                    #                         (df_adjusted_all[COL_NAME_PROVINCE] == province_en)
-                    #             df_adjusted_all.loc[condition, crop_2022] = adjustment
-                    #
-                    #     log_city_entry['Status'] = 'Replace 2022 data with 2017 data'
-                    #
-                    # # 3.3 比例判断与调整
-                    # if RATIO_MIN_1 <= AB_ratio <= RATIO_MAX_1:
-                    #     # 比例范围在0.99-1.01之间, 无需调整
-                    #     log_city_entry['Status'] = f'No Adjustment 【Ratio({AB_ratio}) within 0.99-1.01】'
-                    #
-                    # elif AB_ratio < RATIO_MIN_2 or AB_ratio > RATIO_MAX_2:
-                    #     # 比例范围在<0.9 或 >1.1 范围内
-                    #     if B > 1.0:
-                    #         revise_by_where(AB_ratio, df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017,
-                    #                         city_name_in_data, province_en, log_city_entry)
-                    #     else:
-                    #         if B < 1.0 and -0.5 < (A - B) < 0.5:
-                    #             log_city_entry[
-                    #                 'Status'] = f'Adjustment needed 【B({B})<1.0 and -0.5 < A-B({A - B}) < 0.5】'
-                    #             # --- 4. 执行调整 ---
-                    #             revise(df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017, city_name_in_data,
-                    #                    province_en, log_city_entry)
-                    #         else:
-                    #             revise_by_where(AB_ratio, df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017,
-                    #                             city_name_in_data, province_en, log_city_entry)
-                    #
-                    # elif RATIO_MIN_2 <= AB_ratio < RATIO_MIN_1 or RATIO_MAX_1 < AB_ratio <= RATIO_MAX_2:
-                    #     # 比例范围在0.9-0.99，1.01-1.1之内, 进行如下调整
-                    #     log_city_entry[
-                    #         'Status'] = f'Adjustment needed 【Ratio({AB_ratio}) in ({RATIO_MIN_2}-{RATIO_MIN_1}) or ({RATIO_MAX_1}-{RATIO_MAX_2})】'
-                    #     # --- 4. 执行调整 ---
-                    #     revise(df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017, city_name_in_data,
-                    #            province_en, log_city_entry)
-
-                    log_city_entry = revise_by_city(df_city_ref, df_province_data, df_adjusted_all,
-                                                                   crop_2022, crop_2017, crop_REF,
-                                                                   province_en, city_cn,
-                                                                   province_ref_provided)
-                    all_city_adjustment_logs.append(log_city_entry)
-
-            else:
-                print(f"   {province_cn} {crop_REF} 市级参考数据缺失或不需要调整，跳过市级循环。")
-
-            # 修正数据后校验各省不同作物数据总和
-            check_province(C8, crop_2022, province_en, df_adjusted_all, log_province_entry)
+            log_province_entry = revise_by_province(crop_2017, crop_2022, crop_REF,
+                                                    df_2017, df_adjusted_all, df_national_ref,
+                                                    df_province_ref, province_cn, province_en,
+                                                    province_ref_provided,
+                                                    all_city_adjustment_logs)
             all_province_adjustment_logs.append(log_province_entry)
 
     # --- 5. 结果汇总与输出 ---
@@ -480,8 +291,113 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
     return output_adjusted_file
 
 
-def revise_by_city(df_city_ref, df_province_data, df_adjusted_all,
-                   crop_2022, crop_2017, crop_REF,
+def revise_by_province(crop_2017, crop_2022, crop_REF,
+                       df_2017, df_adjusted_all, df_national_ref, df_province_ref,
+                       province_cn, province_en,
+                       province_ref_provided,
+                       all_city_adjustment_logs):
+    # 过滤出 2022 年当前省份的所有区县数据
+    # 注意：此处使用 df_adjusted_all，确保上一省份/作物调整的结果得以保留
+    df_province_data = df_adjusted_all[df_adjusted_all[COL_NAME_PROVINCE] == province_en].copy()
+
+    # --- 2. 省份层面检查 (AO20/C8) ---
+    AO20 = df_province_data[crop_2022].sum()
+    df_2017_province = df_2017[df_2017[COL_NAME_PROVINCE] == province_en]
+    AO20_2017 = df_2017_province[crop_2017].sum() if crop_2017 in df_2017_province else None
+
+    C8_series = df_national_ref[df_national_ref[COL_NAME_PROVINCE] == province_cn][crop_REF] \
+        if crop_REF in df_national_ref.columns else None
+    # 国家统计年鉴中如果没有 则从对应省统计年鉴中找对应数据
+    if C8_series is None or C8_series.empty:
+        _df_province = df_province_ref[df_province_ref[COL_NAME_PROVINCE] == province_cn]
+        if not _df_province.empty:
+            C8_series = _df_province[crop_REF] if crop_REF in df_province_ref.columns else None
+
+    C8 = C8_series.iloc[0] if C8_series is not None and not C8_series.empty else np.nan
+    print(f"1. 2022 {province_cn} {crop_REF} 面积 (区县总和 AO20): {AO20:.4f} 千公顷")
+    print(f"   国家统计年鉴 {province_cn} {crop_REF} 数据 (C8): {C8:.4f} 千公顷")
+
+    ratio_province = AO20 / C8 if AO20 > 0 and C8 > 0 else 0
+
+    log_province_entry = {
+        'Crop   ': crop_REF,
+        'Crop_2022 Col_Name': crop_2022,
+        'Crop_2017 Col_Name': crop_2017,
+        COL_NAME_PROVINCE + "   ": province_en,
+        'County Province Sum(AO20)': AO20,
+        '2017 County Province Sum(AO20)': AO20_2017,
+        'National Province Ref(C8)': C8,
+        'AO20/C8 Ratio': ratio_province,
+        'Status': '',
+    }
+
+    needs_city_adjustment = True
+    if not np.isnan(C8) and C8 > 0 and AO20 > 0:
+        print(f"   AO20/C8 比例: {ratio_province:.4f}")
+
+        if RATIO_MIN_PROVINCE <= ratio_province <= RATIO_MAX_PROVINCE:
+            # AO20/C8结果范围在0.95-1.05之间 不需要调整
+            print(f"   比例在 [{RATIO_MIN_PROVINCE}, {RATIO_MAX_PROVINCE}] 范围内，无需市级调整。")
+            needs_city_adjustment = False
+
+            log_province_entry[
+                "Status"] = f'Skipped 【Ratio AO20/C8 = {ratio_province} in ({RATIO_MIN_PROVINCE}-{RATIO_MAX_PROVINCE})】'
+
+            # continue
+        else:
+            # AO20/C8结果范围在0.95-1.05之外, 进行调整
+            print(f"   比例不在 [{RATIO_MIN_PROVINCE}, {RATIO_MAX_PROVINCE}] 范围内，进行市级调整。")
+            log_province_entry[
+                "Status"] = f'比例不在 [{RATIO_MIN_PROVINCE}, {RATIO_MAX_PROVINCE}] 范围内，进行市级调整。'
+    # else:
+    #     print("   C8 或 AO20 数据无效，跳过省份级检查，无法进行市级调整。")
+    #     needs_city_adjustment = False
+    #     log_province_entry["Status"] = f'C8 或 AO20 数据无效，跳过省份级检查，无法进行市级调整。'
+    # continue
+
+    # --- 2.3 确定市级参考数据 (B) ---
+    _df_city_ref = pd.DataFrame
+
+    # 优先使用提供的各省统计年鉴
+    if province_ref_provided and not df_province_ref.empty:
+        # if CROP_REF in df_liaoning_ref.columns:
+        _df_city_ref = df_province_ref.copy()
+        print(f"--- 使用提供的 '{province_cn}统计年鉴' {crop_REF} 数据作为市级参考值 (B)。 ---")
+
+    # 其他情况（包括辽宁年鉴缺失时）进行推算
+    # elif needs_city_adjustment:
+    #     # 推算逻辑：按 2022 区县数据中的城市占比分解 C8
+    #     print(f"--- 缺乏市级年鉴数据，根据2022区县数据比例分解 C8 ({province_cn}) ---")
+    #
+    #     df_city_sums = df_province_data.groupby(COL_NAME_CITY)[crop_2022].sum().reset_index()
+    #     df_city_sums['Weight'] = df_city_sums[crop_2022] / AO20
+    #     df_city_sums[crop_REF] = df_city_sums['Weight'] * C8
+    #     _df_city_ref = df_city_sums.rename(columns={COL_NAME_CITY: 'City_CN'})[['City_CN', crop_REF]]
+
+    df_city_ref = _df_city_ref[_df_city_ref[COL_NAME_PROVINCE] == province_cn]
+    # --- 3. 市级调整逻辑 (统一使用 df_city_ref) ---
+    if needs_city_adjustment and not df_city_ref.empty:
+        cities_to_process = [c for c in df_city_ref['City_CN'].unique() if
+                             c not in ['全省', '地区', 'nan', np.nan, province_cn]]
+
+        for city_cn in cities_to_process:
+            log_city_entry = revise_by_city(crop_2022, crop_2017, crop_REF,
+                                            df_city_ref, df_province_data, df_adjusted_all,
+                                            province_en, city_cn,
+                                            province_ref_provided)
+            all_city_adjustment_logs.append(log_city_entry)
+
+    else:
+        print(f"   {province_cn} {crop_REF} 市级参考数据缺失或不需要调整，跳过市级循环。")
+
+    # 修正数据后校验各省不同作物数据总和
+    check_province(C8, crop_2022, province_en, df_adjusted_all, log_province_entry)
+
+    return log_province_entry
+
+
+def revise_by_city(crop_2022, crop_2017, crop_REF,
+                   df_city_ref, df_province_data, df_adjusted_all,
                    province_en, city_cn,
                    province_ref_provided):
     # 3.1 查找 B
@@ -529,28 +445,27 @@ def revise_by_city(df_city_ref, df_province_data, df_adjusted_all,
         log_city_entry['Status'] = 'Skipped 【A and B and sum_2017 is zero/missing】'
         return log_city_entry
 
-    if B <= 0:
-        """
-        查询2022年表中数值为0的区县, 并对应这些区县找到2017年表中不为0的数据 填充到2022年的表格中
-        """
-        df_city_2022_zero = df_city_data[df_city_data[crop_2022] == 0].copy()
-        counties_to_adjust = df_city_2022_zero[COL_NAME_COUNTY].tolist()
-
-        df_city_2017_non_zero = df_city_2017_base[
-            (df_city_2017_base[crop_2017] != 0) &
-            (df_city_2017_base[COL_NAME_COUNTY].isin(counties_to_adjust))
-            ]
-        if not df_city_2022_zero.empty and not df_city_2017_non_zero.empty:
-            df_city_2022_zero['Adjustment'] = df_city_2017_non_zero[crop_2017]
-            for _, row in df_city_2022_zero.iterrows():
-                county = row[COL_NAME_COUNTY]
-                adjustment = row['Adjustment']
-                condition = (df_adjusted_all[COL_NAME_CITY] == city_name_in_data) & \
-                            (df_adjusted_all[COL_NAME_COUNTY] == county) & \
-                            (df_adjusted_all[COL_NAME_PROVINCE] == province_en)
-                df_adjusted_all.loc[condition, crop_2022] = adjustment
-
-        log_city_entry['Status'] = 'Replace 2022 data with 2017 data'
+    # if B <= 0:
+    #     """
+    #     查询2022年表中数值为0的区县, 并对应这些区县找到2017年表中不为0的数据 填充到2022年的表格中
+    #     """
+    #     df_city_2022_zero = df_city_data[df_city_data[crop_2022] == 0].copy()
+    #     counties_to_adjust = df_city_2022_zero[COL_NAME_COUNTY].tolist()
+    #
+    #     df_city_2017_non_zero = df_city_2017_base[
+    #         (df_city_2017_base[crop_2017] != 0) &
+    #         (df_city_2017_base[COL_NAME_COUNTY].isin(counties_to_adjust))
+    #         ]
+    #     if not df_city_2022_zero.empty and not df_city_2017_non_zero.empty:
+    #         df_city_2022_zero['Adjustment'] = df_city_2017_non_zero[crop_2017]
+    #         for _, row in df_city_2022_zero.iterrows():
+    #             county = row[COL_NAME_COUNTY]
+    #             adjustment = row['Adjustment']
+    #             condition = (df_adjusted_all[COL_NAME_CITY] == city_name_in_data) & \
+    #                         (df_adjusted_all[COL_NAME_COUNTY] == county) & \
+    #                         (df_adjusted_all[COL_NAME_PROVINCE] == province_en)
+    #             df_adjusted_all.loc[condition, crop_2022] = adjustment
+    #     log_city_entry['Status'] = 'Replace 2022 data with 2017 data'
 
     # 3.3 比例判断与调整
     # 比例范围在0.99-1.01之间, 无需调整
@@ -560,49 +475,51 @@ def revise_by_city(df_city_ref, df_province_data, df_adjusted_all,
     # 比例范围在<0.9 或 >1.1 范围内
     elif AB_ratio < RATIO_MIN_2 or AB_ratio > RATIO_MAX_2:
         if B > 1.0:
-            revise_by_where(AB_ratio, df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017,
-                            city_name_in_data, province_en, log_city_entry)
+            revise_by_where(AB_ratio, A, B, crop_2022, crop_2017,
+                            df_city_data, df_adjusted_all,
+                            city_name_in_data, province_en,
+                            log_city_entry)
         else:
             if B < 1.0 and -0.5 < (A - B) < 0.5:
                 log_city_entry[
                     'Status'] = f'Adjustment needed 【B({B})<1.0 and -0.5 < A-B({A - B}) < 0.5】'
                 # --- 4. 执行调整 ---
-                revise(df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017, city_name_in_data,
-                       province_en, log_city_entry)
+                revise_county(A, B, crop_2022, crop_2017,
+                              df_city_data, df_adjusted_all,
+                              city_name_in_data, province_en,
+                              log_city_entry)
             else:
-                revise_by_where(AB_ratio, df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017,
-                                city_name_in_data, province_en, log_city_entry)
+                revise_by_where(AB_ratio, A, B, crop_2022, crop_2017,
+                                df_city_data, df_adjusted_all,
+                                city_name_in_data, province_en,
+                                log_city_entry)
 
     # 比例范围在0.9-0.99，1.01-1.1之内, 进行如下调整
     elif RATIO_MIN_2 <= AB_ratio < RATIO_MIN_1 or RATIO_MAX_1 < AB_ratio <= RATIO_MAX_2:
         log_city_entry[
             'Status'] = f'Adjustment needed 【Ratio({AB_ratio}) in ({RATIO_MIN_2}-{RATIO_MIN_1}) or ({RATIO_MAX_1}-{RATIO_MAX_2})】'
         # --- 4. 执行调整 ---
-        revise(df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017, city_name_in_data,
-               province_en, log_city_entry)
+        revise_county(A, B, crop_2022, crop_2017,
+                      df_city_data, df_adjusted_all,
+                      city_name_in_data, province_en,
+                      log_city_entry)
 
     return log_city_entry
 
 
-def check_province(C8: float, crop_2022: str, province_en: str, df_adjusted_all, log_province_entry):
-    if '范围内，进行市级调整' in log_province_entry['Status']:
-        new_AO20 = df_adjusted_all[(df_adjusted_all[COL_NAME_PROVINCE] == province_en)][crop_2022].sum()
-        new_AO20 = round(new_AO20, ROUND_DECIMAL)
-
-        new_ratio_province = new_AO20 / C8 if new_AO20 > 0 and C8 > 0 else 0
-        log_province_entry['Status'] += f' | Adjusted. New Sum: {new_AO20}'
-        log_province_entry['Check (New AO20/C8 Ratio)'] = new_ratio_province
-
-
-def revise_by_where(AB_ratio, df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017, city_name_in_data, province_en,
-                    log_entry):
+def revise_by_where(AB_ratio, A, B, crop_2022, crop_2017,
+                    df_city_data, df_adjusted_all,
+                    city_name_in_data, province_en,
+                    log_city_entry):
     # 如果 A/B < 0.9, 执行步骤三调整
     if AB_ratio < RATIO_MIN_2:
         # --- 4. 执行调整 ---
-        log_entry[
+        log_city_entry[
             'Status'] = f'Adjustment needed 【B({B})>1.0 and Ratio({AB_ratio}) < {RATIO_MIN_2}】'
-        revise(df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017, city_name_in_data,
-               province_en, log_entry)
+        revise_county(A, B, crop_2022, crop_2017,
+                      df_city_data, df_adjusted_all,
+                      city_name_in_data, province_en,
+                      log_city_entry)
 
     # 如果 A/B > 1.1, 按条件调整
     elif AB_ratio > RATIO_MAX_2:
@@ -611,19 +528,24 @@ def revise_by_where(AB_ratio, df_adjusted_all, A, B, df_city_data, crop_2022, cr
             # 当2022年的数据中都有值则调整, 否则标记
             df_city_2022_zero = df_city_data[df_city_data[crop_2022] == 0]
             if df_city_2022_zero.empty:
-                log_entry[
+                log_city_entry[
                     'Status'] = f'Adjustment needed 【B({B})>1.0 and {RATIO_MAX_3} > Ratio({AB_ratio}) > {RATIO_MAX_2}】'
-                revise(df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017,
-                       city_name_in_data, province_en, log_entry)
+                revise_county(A, B, crop_2022, crop_2017,
+                              df_city_data, df_adjusted_all,
+                              city_name_in_data, province_en,
+                              log_city_entry)
             else:
-                log_entry[
+                log_city_entry[
                     'Status'] = f'Marked 【Ratio({AB_ratio}) < {RATIO_MAX_3} and > {RATIO_MAX_2}, But 2022 base has zero'
         #  如果 A/B >= 1.5 报错
         elif AB_ratio >= RATIO_MAX_3:
-            log_entry['Status'] = f'Error |【Ratio({AB_ratio}) >= {RATIO_MAX_3}】'
+            log_city_entry['Status'] = f'Error |【Ratio({AB_ratio}) >= {RATIO_MAX_3}】'
 
 
-def revise(df_adjusted_all, A, B, df_city_data, crop_2022, crop_2017, city_name_in_data, province_en, log_entry):
+def revise_county(A, B, crop_2022, crop_2017,
+                  df_city_data, df_adjusted_all,
+                  city_name_in_data, province_en,
+                  log_entry):
     difference = A - B
     if difference > 0:
         """
@@ -729,6 +651,32 @@ def update_crop_data(df_adjusted_all, df_city_base, B, city_name_in_data, crop_2
         df_adjusted_all.loc[condition, crop_2022] = adjustment
 
 
+def check_province(C8: float, crop_2022: str, province_en: str, df_adjusted_all, log_province_entry):
+    if '范围内，进行市级调整' in log_province_entry['Status']:
+        new_AO20 = df_adjusted_all[(df_adjusted_all[COL_NAME_PROVINCE] == province_en)][crop_2022].sum()
+        new_AO20 = round(new_AO20, ROUND_DECIMAL)
+
+        new_ratio_province = new_AO20 / C8 if new_AO20 > 0 and C8 > 0 else 0
+        log_province_entry['Status'] += f' | Adjusted. New Sum: {new_AO20}'
+        log_province_entry['Check (New AO20/C8 Ratio)'] = new_ratio_province
+
+
+def check_city(df_adjusted_all, B, city_name_in_data, crop_2022, log_entry, province_en):
+    A_new = df_adjusted_all[
+        (df_adjusted_all[COL_NAME_CITY] == city_name_in_data) &
+        (df_adjusted_all[COL_NAME_PROVINCE] == province_en)
+        ][crop_2022].sum()
+
+    A_new = round(A_new, ROUND_DECIMAL)
+    # B = round(B, ROUND_DECIMAL)
+    new_AB_ratio = round(A_new / B, 4) if B != 0 else 0.0
+    logger.info(
+        f"{province_en} / {city_name_in_data} {crop_2022} | Check (New A/B) = ( {A_new} / {B} = {new_AB_ratio} )")
+
+    log_entry['Check (New A/B)'] = f"{A_new} / {B} = {new_AB_ratio}"
+    log_entry['Status'] += f" | Adjusted. New Sum: {A_new}"
+
+
 def final_check(df_adjusted_all, df_national_ref, provinces_to_process):
     for crop_2022_col, (_, crop_ref_col) in CROP_COLUMN_MAP.items():
         crop_ref = crop_ref_col
@@ -752,22 +700,6 @@ def final_check(df_adjusted_all, df_national_ref, provinces_to_process):
                     f"{province_cn} 调整后总和: {AO20_new:.4f} 千公顷 | 调整后比例 (AO20/C8): {ratio_province_new:.4f}")
             else:
                 print(f"{province_cn} 调整后总和: {AO20_new:.4f} 千公顷 | C8数据缺失。")
-
-
-def check_city(df_adjusted_all, B, city_name_in_data, crop_2022, log_entry, province_en):
-    A_new = df_adjusted_all[
-        (df_adjusted_all[COL_NAME_CITY] == city_name_in_data) &
-        (df_adjusted_all[COL_NAME_PROVINCE] == province_en)
-        ][crop_2022].sum()
-
-    A_new = round(A_new, ROUND_DECIMAL)
-    # B = round(B, ROUND_DECIMAL)
-    new_AB_ratio = round(A_new / B, 4) if B != 0 else 0.0
-    logger.info(
-        f"{province_en} / {city_name_in_data} {crop_2022} | Check (New A/B) = ( {A_new} / {B} = {new_AB_ratio} )")
-
-    log_entry['Check (New A/B)'] = f"{A_new} / {B} = {new_AB_ratio}"
-    log_entry['Status'] += f" | Adjusted. New Sum: {A_new}"
 
 
 def mask_changed(df_2022, df_adjusted_all) -> pd.DataFrame:
@@ -901,10 +833,9 @@ if __name__ == '__main__':
     RATIO_MAX_3 = _config.ratio['RATIO_MAX_3']
 
     # --- 运行主程序 ---
-    try:
-        df_2022, df_2017, df_national_ref, df_liaoning_ref, liaoning_ref_provided = load_data()
-        output_file = process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, df_liaoning_ref,
-                                                               liaoning_ref_provided)
-
-    except Exception as e:
-        print(f"程序执行失败: {e}")
+    # try:
+    df_2022, df_2017, df_national_ref, df_province_ref, province_ref_provided = load_data()
+    output_file = process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, df_province_ref,
+                                                           province_ref_provided)
+    # except Exception as e:
+    #     logger.error(f"程序执行失败: {e}")
