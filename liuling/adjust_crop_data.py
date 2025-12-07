@@ -233,8 +233,8 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
             print(f"=======================================================")
 
             log_province_entry = revise_by_province(crop_2017, crop_2022, crop_REF,
-                                                    df_2017, df_adjusted_all, df_national_ref,
-                                                    df_province_ref, province_cn, province_en,
+                                                    df_2017, df_adjusted_all, df_national_ref, df_province_ref,
+                                                    province_cn, province_en,
                                                     province_ref_provided,
                                                     all_city_adjustment_logs)
             all_province_adjustment_logs.append(log_province_entry)
@@ -314,8 +314,8 @@ def revise_by_province(crop_2017, crop_2022, crop_REF,
             C8_series = _df_province[crop_REF] if crop_REF in df_province_ref.columns else None
 
     C8 = C8_series.iloc[0] if C8_series is not None and not C8_series.empty else np.nan
-    print(f"1. 2022 {province_cn} {crop_REF} 面积 (区县总和 AO20): {AO20:.4f} 千公顷")
-    print(f"   国家统计年鉴 {province_cn} {crop_REF} 数据 (C8): {C8:.4f} 千公顷")
+    logger.info(f"1. 2022 {province_cn} {crop_REF}({crop_2022}) 面积 (区县总和 AO20): {AO20:.4f} 千公顷")
+    logger.info(f"   国家统计年鉴 {province_cn} {crop_REF} 数据 (C8): {C8:.4f} 千公顷")
 
     ratio_province = AO20 / C8 if AO20 > 0 and C8 > 0 else 0
 
