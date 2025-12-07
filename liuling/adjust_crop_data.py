@@ -90,7 +90,7 @@ COL_CROP_NAME_MAP = {
     '甜菜': 'sugarbeet_sown_area(1000 hectares)',
     '烟叶': 'tobacco_sown_area(1000 hectares)',
     '蔬菜': 'vegetable_sown_area(1000 hectares)',
-    '果园': 'fruittree_sown_area(1000 hectares)',
+    '果树': 'fruittree_sown_area(1000 hectares)',
 }
 
 # --- 关键修改：作物列名映射表 ---
@@ -110,7 +110,7 @@ CROP_COLUMN_MAP = {
     'sugarbeet_sown_area(1000 hectares)': ('sugarbeet_sown_area', '甜菜'),
     'tobacco_sown_area(1000 hectares)': ('tobacco_sown_area', '烟叶'),
     'vegetable_sown_area(1000 hectares)': ('vegetable_sown_area', '蔬菜'),
-    'fruittree_sown_area(1000 hectares)': ('fruittree_sown_area', '果园'),
+    'fruittree_sown_area(1000 hectares)': ('fruittree_sown_area', '果树'),
     'greenfodder_sown_area(1000 hectares)': ('greenfodder_sown_area', '青饲料'),
     'managedgrass_sown_area(1000 hectares)': ('managedgrass_sown_area', '管理草地'),
     'naturalgrass_sown_area(1000 hectares)': ('naturalgrass_sown_area', '自然草地'),
@@ -149,8 +149,7 @@ def load_data():
         # rename_cols.update({'省份': COL_NAME_PROVINCE})
         # df_national_ref.rename(columns=rename_cols, inplace=True)
 
-        # 3. 尝试加载辽宁省统计年鉴
-        province_ref_provided = True
+        # 3. 尝试加载各省统计年鉴
         try:
             df_province_ref = pd.read_excel(input_file, sheet_name='各省统计年鉴', header=0)
             df_province_ref.rename(columns={'地区': COL_NAME_CITY_CN, '省': COL_NAME_PROVINCE}, inplace=True)
@@ -160,9 +159,7 @@ def load_data():
             # df_province_ref.rename(columns=rename_cols, inplace=True)
             print(f"注意: 工作表 '辽宁省统计年鉴' 已找到，将用于辽宁省的市级参考。")
         except ValueError as e:
-            print(f"注意: 工作表 '辽宁省统计年鉴' 未找到。所有省份的市级参考值将通过分解国家级数据得到。")
-            df_province_ref = pd.DataFrame()
-            province_ref_provided = False
+            print(f"注意: 工作表 '各省统计年鉴' 未找到。所有省份的市级参考值将通过分解国家级数据得到。")
             raise e
 
         # 4. 清洗数值列
@@ -183,7 +180,7 @@ def load_data():
             df[COL_NAME_CITY] = df[COL_NAME_CITY].astype(str)
             df[COL_NAME_PROVINCE] = df[COL_NAME_PROVINCE].astype(str)
 
-        return df_2022, df_2017, df_national_ref, df_province_ref, province_ref_provided
+        return df_2022, df_2017, df_national_ref, df_province_ref
 
     except FileNotFoundError as e:
         print(f"错误: 文件未找到，请检查路径是否正确: {e.filename}")
@@ -197,8 +194,7 @@ def generate_province_statistical_table():
     pass
 
 
-def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, df_province_ref,
-                                             province_ref_provided):
+def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, df_province_ref):
     """循环遍历所有作物和所有省份，执行调整逻辑。"""
 
     # 最终调整后的数据副本 (在每个作物循环开始时创建，以便在 df_2022 上进行操作)
@@ -235,7 +231,6 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
             log_province_entry = revise_by_province(crop_2017, crop_2022, crop_REF,
                                                     df_2017, df_adjusted_all, df_national_ref, df_province_ref,
                                                     province_cn, province_en,
-                                                    province_ref_provided,
                                                     all_city_adjustment_logs)
             all_province_adjustment_logs.append(log_province_entry)
 
@@ -294,7 +289,6 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
 def revise_by_province(crop_2017, crop_2022, crop_REF,
                        df_2017, df_adjusted_all, df_national_ref, df_province_ref,
                        province_cn, province_en,
-                       province_ref_provided,
                        all_city_adjustment_logs):
     # 过滤出 2022 年当前省份的所有区县数据
     # 注意：此处使用 df_adjusted_all，确保上一省份/作物调整的结果得以保留
@@ -359,7 +353,7 @@ def revise_by_province(crop_2017, crop_2022, crop_REF,
     _df_city_ref = pd.DataFrame
 
     # 优先使用提供的各省统计年鉴
-    if province_ref_provided and not df_province_ref.empty:
+    if not df_province_ref.empty:
         # if CROP_REF in df_liaoning_ref.columns:
         _df_city_ref = df_province_ref.copy()
         print(f"--- 使用提供的 '{province_cn}统计年鉴' {crop_REF} 数据作为市级参考值 (B)。 ---")
@@ -384,8 +378,7 @@ def revise_by_province(crop_2017, crop_2022, crop_REF,
         for city_cn in cities_to_process:
             log_city_entry = revise_by_city(crop_2022, crop_2017, crop_REF,
                                             df_city_ref, df_province_data, df_adjusted_all,
-                                            province_en, city_cn,
-                                            province_ref_provided)
+                                            province_en, city_cn)
             all_city_adjustment_logs.append(log_city_entry)
 
     else:
@@ -399,22 +392,16 @@ def revise_by_province(crop_2017, crop_2022, crop_REF,
 
 def revise_by_city(crop_2022, crop_2017, crop_REF,
                    df_city_ref, df_province_data, df_adjusted_all,
-                   province_en, city_cn,
-                   province_ref_provided):
+                   province_en, city_cn):
     # 3.1 查找 B
     B_series = df_city_ref[df_city_ref['City_CN'] == city_cn][crop_REF] \
         if crop_REF in df_city_ref.columns else None
     B = B_series.iloc[0] if B_series is not None else 0.0
 
     # 确定 City 匹配方式
-    city_match_name = city_cn
+    # city_match_name = city_cn
     # city_match_name = city_cn.replace('市', '').replace('地区', '')
-    if province_ref_provided:
-        df_city_data = df_province_data[
-            df_province_data[COL_NAME_CITY].str.contains(city_match_name, na=False)
-        ].copy()
-    else:
-        df_city_data = df_province_data[df_province_data[COL_NAME_CITY] == city_cn].copy()
+    df_city_data = df_province_data[df_province_data[COL_NAME_CITY] == city_cn].copy()
 
     A = 0
     city_name_in_data = None
@@ -835,8 +822,7 @@ if __name__ == '__main__':
 
     # --- 运行主程序 ---
     # try:
-    df_2022, df_2017, df_national_ref, df_province_ref, province_ref_provided = load_data()
-    output_file = process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, df_province_ref,
-                                                           province_ref_provided)
+    df_2022, df_2017, df_national_ref, df_province_ref = load_data()
+    output_file = process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, df_province_ref)
     # except Exception as e:
     #     logger.error(f"程序执行失败: {e}")

@@ -121,7 +121,7 @@ CROP_COLUMN_MAP = {
     'sugarbeet_sown_area(1000 hectares)': ('sugarbeet_sown_area', '甜菜'),
     'tobacco_sown_area(1000 hectares)': ('tobacco_sown_area', '烟叶'),
     'vegetable_sown_area(1000 hectares)': ('vegetable_sown_area', '蔬菜'),
-    'fruittree_sown_area(1000 hectares)': ('fruittree_sown_area', '果园'),
+    'fruittree_sown_area(1000 hectares)': ('fruittree_sown_area', '果树'),
     'greenfodder_sown_area(1000 hectares)': ('greenfodder_sown_area', '青饲料'),
     'managedgrass_sown_area(1000 hectares)': ('managedgrass_sown_area', '管理草地'),
     'naturalgrass_sown_area(1000 hectares)': ('naturalgrass_sown_area', '自然草地'),
@@ -245,6 +245,9 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
 
     # 定义另一个样式函数：为特定字符串设置绿色背景和白色字体
     def highlight_status(val):
+        if val is None or val is np.nan:
+            return ''
+
         if 'Error' in val:
             # 设置背景为红色
             return 'background-color: red;'
@@ -294,12 +297,13 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
 def revise_by_province(crop_2017, crop_2022, crop_ref,
                        df_2017, df_adjusted_all,
                        province_cn, province_en):
+
     # 过滤出 2022 年当前省份的所有区县数据
     # 注意：此处使用 df_adjusted_all，确保上一省份/作物调整的结果得以保留
     df_province_ref = df_adjusted_all[df_adjusted_all[COL_NAME_PROVINCE] == province_cn].copy()
 
-    df_province_data = df_province_ref[df_province_ref[COL_NAME_CITY].isnull()]
-    df_city_ref = df_province_ref[df_province_ref[COL_NAME_CITY].notnull()]
+    df_province_data = df_province_ref[df_province_ref[COL_NAME_CITY] == province_cn]
+    df_city_ref = df_province_ref[df_province_ref[COL_NAME_CITY] != province_cn]
     df_province_2017 = df_2017[df_2017[COL_NAME_PROVINCE] == province_en].copy()
 
     # --- 2. 省份层面检查 (sum_province_ref / sum_city_ref) ---
