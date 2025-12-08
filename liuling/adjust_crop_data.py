@@ -336,8 +336,7 @@ def revise_by_province(crop_2017, crop_2022, crop_REF,
 
             log_province_entry[
                 "Status"] = f'Skipped 【Ratio AO20/C8 = {ratio_province} in ({RATIO_MIN_PROVINCE}-{RATIO_MAX_PROVINCE})】'
-
-            # continue
+            return log_province_entry
         else:
             # AO20/C8结果范围在0.95-1.05之外, 进行调整
             print(f"   比例不在 [{RATIO_MIN_PROVINCE}, {RATIO_MAX_PROVINCE}] 范围内，进行市级调整。")
@@ -512,7 +511,8 @@ def revise_by_where(AB_ratio, A, B, crop_2022, crop_2017,
     # 如果 A/B > 1.1, 按条件调整
     elif AB_ratio > RATIO_MAX_2:
         #  如果 A/B > 1.1 && < 1.5
-        if RATIO_MAX_3 > AB_ratio > RATIO_MAX_2:
+        # if RATIO_MAX_3 > AB_ratio > RATIO_MAX_2:
+        if AB_ratio > RATIO_MAX_2:
             # 当2022年的数据中都有值则调整, 否则标记
             df_city_2022_zero = df_city_data[df_city_data[crop_2022] == 0]
             if df_city_2022_zero.empty:
@@ -533,7 +533,12 @@ def revise_by_where(AB_ratio, A, B, crop_2022, crop_2017,
 def revise_county(A, B, crop_2022, crop_2017,
                   df_city_data, df_adjusted_all,
                   city_name_in_data, province_en,
-                  log_entry):
+                  log_city_entry):
+    # B为省统计年鉴中各市的总和
+    if B == 0:
+        log_city_entry['Status'] = f'Skipped 【A={A}, B={B}】'
+        return
+
     difference = A - B
     if difference > 0:
         """
@@ -558,7 +563,7 @@ def revise_county(A, B, crop_2022, crop_2017,
             for _, row in df_city_2022_base.iterrows():
                 update_crop_data(df_adjusted_all, df_city_2022_base, B, city_name_in_data, crop_2022, province_en)
         else:
-            log_entry['Status'] += f' | Adjustment Failed - 2022 base city is zero or missing.'
+            log_city_entry['Status'] += f' | Adjustment Failed - 2022 base city is zero or missing.'
     else:
         """
         计算（A-B) < 0, 对2022年鞍山市花生数据向上调整，例如：
@@ -576,7 +581,7 @@ def revise_county(A, B, crop_2022, crop_2017,
             ].copy()
 
         sum_2017 = df_city_2017_base[crop_2017].sum() if crop_2017 in df_city_2017_base else 0.0
-        log_entry['2017 County_Sum'] += sum_2017
+        log_city_entry['2017 County_Sum'] += sum_2017
 
         if sum_2017 > 0 and not df_city_2017_base.empty:
             df_city_2017_base['Adjustment_Ratio'] = round(df_city_2017_base[crop_2017] / sum_2017, ROUND_DECIMAL)
@@ -619,11 +624,11 @@ def revise_county(A, B, crop_2022, crop_2017,
                     # log_entry['Status'] += f' | Adjustment Failed - 2017 base SUM_2017({sum_2017}) is zero or missing.'
             else:
                 if sum_2017 == 0:
-                    log_entry['Status'] += f"| But 2017 base is zero or missing."
+                    log_city_entry['Status'] += f"| But 2017 base is zero or missing."
                     return
 
     # 5. 检查修改后与修改前的结果一致性
-    check_city(df_adjusted_all, B, city_name_in_data, crop_2022, log_entry, province_en)
+    check_city(df_adjusted_all, B, city_name_in_data, crop_2022, log_city_entry, province_en)
 
 
 def update_crop_data(df_adjusted_all, df_city_base, B, city_name_in_data, crop_2022, province_en):
