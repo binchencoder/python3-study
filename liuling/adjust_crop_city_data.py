@@ -125,6 +125,10 @@ CROP_COLUMN_MAP = {
     'greenfodder_sown_area(1000 hectares)': ('greenfodder_sown_area', '青饲料'),
     'managedgrass_sown_area(1000 hectares)': ('managedgrass_sown_area', '管理草地'),
     'naturalgrass_sown_area(1000 hectares)': ('naturalgrass_sown_area', '自然草地'),
+    'rice_sown_area(1000 hectares)': ('rice_sown_area', '水稻'),
+    'wheat_sown_area(1000 hectares)': ('wheat_sown_area', '小麦'),
+    'maize_sown_area(1000 hectares)': ('maize_sown_area', '玉米'),
+    'beans_sown_area(1000 hectares)': ('beans_sown_area', '豆类'),
 
     # 请根据您的实际需求，补充需要进行调整的作物列
 }
@@ -297,7 +301,6 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
 def revise_by_province(crop_2017, crop_2022, crop_ref,
                        df_2017, df_adjusted_all,
                        province_cn, province_en):
-
     # 过滤出 2022 年当前省份的所有区县数据
     # 注意：此处使用 df_adjusted_all，确保上一省份/作物调整的结果得以保留
     df_province_ref = df_adjusted_all[df_adjusted_all[COL_NAME_PROVINCE] == province_cn].copy()
@@ -315,10 +318,10 @@ def revise_by_province(crop_2017, crop_2022, crop_ref,
     AB_ratio = A_province_sum / B_city_sum if B_city_sum != 0 else 0
 
     log_province_entry = {
-        'Crop   ': crop_ref,
+        'Crop': crop_ref,
         'Crop_2022 Col_Name': crop_2022,
         'Crop_2017 Col_Name': crop_2017,
-        'Province   ': province_cn,
+        'Province': province_cn,
         'Sum Province Ref(A)': A_province_sum,
         'Sum City Ref(B)': B_city_sum,
         'Ratio(A/B)': AB_ratio,
@@ -535,17 +538,17 @@ def write_df(df, output_file_name, sheet_name: str = None):
         df.to_excel(output_file_name, sheet_name=sheet_name, index=False)
 
     # 使用openpyxl加载刚才保存的Excel文件
-    wb = load_workbook(excel_file)
-    for sheet in wb.sheetnames:
-        ws = wb[sheet]
-        # 自适应调整列宽
-        for column_cells in ws.columns:
-            length = max(len(str(cell.value)) for cell in column_cells if cell.value is not None)
-            ws.column_dimensions[column_cells[0].column_letter].width = length + 2  # 可以根据需要调整额外的宽度
-
-    # 保存调整后的Excel文件
-    wb.save(excel_file)
-    wb.close()
+    # wb = load_workbook(excel_file)
+    # for sheet in wb.sheetnames:
+    #     ws = wb[sheet]
+    #     # 自适应调整列宽
+    #     for column_cells in ws.columns:
+    #         length = max(len(str(cell.value)) for cell in column_cells if cell.value is not None)
+    #         ws.column_dimensions[column_cells[0].column_letter].width = length + 2  # 可以根据需要调整额外的宽度
+    #
+    # # 保存调整后的Excel文件
+    # wb.save(excel_file)
+    # wb.close()
 
 
 if __name__ == '__main__':

@@ -416,11 +416,11 @@ def revise_by_city(crop_2022, crop_2017, crop_REF,
 
     AB_ratio = A / B if B != 0 else 0.0
     log_city_entry = {
-        'Crop    ': crop_REF,
+        'Crop': crop_REF,
         'Crop_2022': crop_2022,
         'Crop_2017': crop_2017,
         'Province': province_en,
-        'City        ': city_name_in_data,
+        'City': city_name_in_data,
         '2022 County_Sum (A)': A,
         'Ref_Data (B)': B,
         '2017 County_Sum': sum_2017,
@@ -790,17 +790,17 @@ def write_df(df, output_file_name, sheet_name: str = None):
         df.to_excel(output_file_name, sheet_name=sheet_name, index=False)
 
     # 使用openpyxl加载刚才保存的Excel文件
-    wb = load_workbook(excel_file)
-    for sheet in wb.sheetnames:
-        ws = wb[sheet]
-        # 自适应调整列宽
-        for column_cells in ws.columns:
-            length = max(len(str(cell.value)) for cell in column_cells if cell.value is not None)
-            ws.column_dimensions[column_cells[0].column_letter].width = length + 2  # 可以根据需要调整额外的宽度
-
-    # 保存调整后的Excel文件
-    wb.save(excel_file)
-    wb.close()
+    # wb = load_workbook(excel_file)
+    # for sheet in wb.sheetnames:
+    #     ws = wb[sheet]
+    #     # 自适应调整列宽
+    #     for column_cells in ws.columns:
+    #         length = max(len(str(cell.value)) for cell in column_cells if cell.value is not None)
+    #         ws.column_dimensions[column_cells[0].column_letter].width = length + 2  # 可以根据需要调整额外的宽度
+    #
+    # # 保存调整后的Excel文件
+    # wb.save(excel_file)
+    # wb.close()
 
 
 if __name__ == '__main__':
