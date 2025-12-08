@@ -521,25 +521,30 @@ def revise_by_where(AB_ratio, A, B, crop_2022, crop_2017,
 
     # 如果 A/B > 1.1, 按条件调整
     elif AB_ratio > RATIO_MAX_2:
-        #  如果 A/B > 1.1 && < 1.5
-        # if RATIO_MAX_3 > AB_ratio > RATIO_MAX_2:
-        if AB_ratio > RATIO_MAX_2:
-            # 当2022年的数据中都有值则调整, 否则标记
-            df_city_2022_zero = df_city_data[df_city_data[crop_2022] == 0]
-            if df_city_2022_zero.empty:
-                log_city_entry[
-                    'Status'] = f'Adjustment needed 【B({B})>1.0 and {RATIO_MAX_3} > Ratio({AB_ratio}) > {RATIO_MAX_2}】'
-                revise_county(A, B, crop_2022, crop_2017,
-                              df_city_data, df_adjusted_all,
-                              city_name_in_data, province_en,
-                              log_city_entry)
-            else:
-                log_city_entry[
-                    'Status'] = f'Marked 【Ratio({AB_ratio}) < {RATIO_MAX_3} and > {RATIO_MAX_2}, But 2022 base has zero'
-        #  如果 A/B >= 1.5 报错
-        elif AB_ratio >= RATIO_MAX_3:
-            log_city_entry['Status'] = f'Error |【Ratio({AB_ratio}) >= {RATIO_MAX_3}】'
+        # #  如果 A/B > 1.1 && < 1.5
+        # # if RATIO_MAX_3 > AB_ratio > RATIO_MAX_2:
+        # if AB_ratio > RATIO_MAX_2:
+        #     # 当2022年的数据中都有值则调整, 否则标记
+        #     df_city_2022_zero = df_city_data[df_city_data[crop_2022] == 0]
+        #     if df_city_2022_zero.empty:
+        #         log_city_entry[
+        #             'Status'] = f'Adjustment needed 【B({B})>1.0 and {RATIO_MAX_3} > Ratio({AB_ratio}) > {RATIO_MAX_2}】'
+        #         revise_county(A, B, crop_2022, crop_2017,
+        #                       df_city_data, df_adjusted_all,
+        #                       city_name_in_data, province_en,
+        #                       log_city_entry)
+        #     else:
+        #         log_city_entry[
+        #             'Status'] = f'Marked 【Ratio({AB_ratio}) < {RATIO_MAX_3} and > {RATIO_MAX_2}, But 2022 base has zero'
+        # #  如果 A/B >= 1.5 报错
+        # elif AB_ratio >= RATIO_MAX_3:
+        #     log_city_entry['Status'] = f'Error |【Ratio({AB_ratio}) >= {RATIO_MAX_3}】'
 
+        log_city_entry['Status'] = f'Adjustment needed 【Ratio({AB_ratio}) >= {RATIO_MAX_3}】'
+        revise_county(A, B, crop_2022, crop_2017,
+                      df_city_data, df_adjusted_all,
+                      city_name_in_data, province_en,
+                      log_city_entry)
 
 def revise_county(A, B, crop_2022, crop_2017,
                   df_city_data, df_adjusted_all,
