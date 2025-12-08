@@ -1,11 +1,10 @@
 checker:
-  input_file: /mnt/work/code/extractor/DATA/四大作物面积调整.xlsx
-  output_log_file: /mnt/work/code/extractor/DATA/2022_crop_sown_area_adjusted_log.xlsx
-  output_adjusted_file: /mnt/work/code/extractor/DATA/2022_crop_sown_area_adjusted_all_crops_and_provinces.xlsx
-
-  #  input_file: /Volumes/BinchenCoder/项目/LIULING/小作物播种面积调整-12.7.xlsx
-  #  output_log_file: /Volumes/BinchenCoder/项目/LIULING/2022_crop_sown_area_adjusted_log.xlsx
-  #  output_adjusted_file: /Volumes/BinchenCoder/项目/LIULING/2022_crop_sown_area_adjusted_all_crops_and_provinces.xlsx
+#  input_file: /mnt/work/code/extractor/DATA/四大作物面积调整.xlsx
+#  output_log_file: /mnt/work/code/extractor/DATA/2022_crop_sown_area_adjusted_log.xlsx
+#  output_adjusted_file: /mnt/work/code/extractor/DATA/2022_crop_sown_area_adjusted_all_crops_and_provinces.xlsx
+  input_file: /Volumes/BinchenCoder/项目/LIULING/小作物播种面积调整-12.8.xlsx
+  output_log_file: /Volumes/BinchenCoder/项目/LIULING/2022_crop_sown_area_adjusted_log-1.xlsx
+  output_adjusted_file: /Volumes/BinchenCoder/项目/LIULING/2022_crop_sown_area_adjusted_all_crops_and_provinces-1.xlsx
 
   # 所有数值保留小数位数
   ROUND_DECIMAL: 6

@@ -114,6 +114,10 @@ CROP_COLUMN_MAP = {
     'greenfodder_sown_area(1000 hectares)': ('greenfodder_sown_area', '青饲料'),
     'managedgrass_sown_area(1000 hectares)': ('managedgrass_sown_area', '管理草地'),
     'naturalgrass_sown_area(1000 hectares)': ('naturalgrass_sown_area', '自然草地'),
+    'rice_sown_area(1000 hectares)': ('rice_sown_area', '水稻'),
+    'wheat_sown_area(1000 hectares)': ('wheat_sown_area', '小麦'),
+    'maize_sown_area(1000 hectares)': ('maize_sown_area', '玉米'),
+    'beans_sown_area(1000 hectares)': ('beans_sown_area', '豆类'),
 
     # 请根据您的实际需求，补充需要进行调整的作物列
 }
@@ -232,7 +236,8 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
                                                     df_2017, df_adjusted_all, df_national_ref, df_province_ref,
                                                     province_cn, province_en,
                                                     all_city_adjustment_logs)
-            all_province_adjustment_logs.append(log_province_entry)
+            if log_province_entry is not None:
+                all_province_adjustment_logs.append(log_province_entry)
 
     # --- 5. 结果汇总与输出 ---
     print("\n\n#######################################################")
@@ -244,6 +249,9 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
 
     # 定义另一个样式函数：为特定字符串设置绿色背景和白色字体
     def highlight_status(val):
+        if val is None or val is np.nan:
+            return ''
+
         if 'Error' in val:
             # 设置背景为红色
             return 'background-color: red;'
@@ -286,10 +294,13 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
     return output_adjusted_file
 
 
-def revise_by_province(crop_2017, crop_2022, crop_REF,
+def revise_by_province(crop_2017, crop_2022, crop_ref,
                        df_2017, df_adjusted_all, df_national_ref, df_province_ref,
                        province_cn, province_en,
                        all_city_adjustment_logs):
+    if crop_2022 not in df_adjusted_all.columns:
+        return None
+
     # 过滤出 2022 年当前省份的所有区县数据
     # 注意：此处使用 df_adjusted_all，确保上一省份/作物调整的结果得以保留
     df_province_data = df_adjusted_all[df_adjusted_all[COL_NAME_PROVINCE] == province_en].copy()
@@ -299,22 +310,22 @@ def revise_by_province(crop_2017, crop_2022, crop_REF,
     df_2017_province = df_2017[df_2017[COL_NAME_PROVINCE] == province_en]
     AO20_2017 = df_2017_province[crop_2017].sum() if crop_2017 in df_2017_province else None
 
-    C8_series = df_national_ref[df_national_ref[COL_NAME_PROVINCE] == province_cn][crop_REF] \
-        if crop_REF in df_national_ref.columns else None
+    C8_series = df_national_ref[df_national_ref[COL_NAME_PROVINCE] == province_cn][crop_ref] \
+        if crop_ref in df_national_ref.columns else None
     # 国家统计年鉴中如果没有 则从对应省统计年鉴中找对应数据
     if C8_series is None or C8_series.empty:
         _df_province = df_province_ref[df_province_ref[COL_NAME_PROVINCE] == province_cn]
         if not _df_province.empty:
-            C8_series = _df_province[crop_REF] if crop_REF in df_province_ref.columns else None
+            C8_series = _df_province[crop_ref] if crop_ref in df_province_ref.columns else None
 
     C8 = C8_series.iloc[0] if C8_series is not None and not C8_series.empty else np.nan
-    logger.info(f"1. 2022 {province_cn} {crop_REF}({crop_2022}) 面积 (区县总和 AO20): {AO20:.4f} 千公顷")
-    logger.info(f"   国家统计年鉴 {province_cn} {crop_REF} 数据 (C8): {C8:.4f} 千公顷")
+    logger.info(f"1. 2022 {province_cn} {crop_ref}({crop_2022}) 面积 (区县总和 AO20): {AO20:.4f} 千公顷")
+    logger.info(f"   国家统计年鉴 {province_cn} {crop_ref} 数据 (C8): {C8:.4f} 千公顷")
 
     ratio_province = AO20 / C8 if AO20 > 0 and C8 > 0 else 0
 
     log_province_entry = {
-        'Crop   ': crop_REF,
+        'Crop   ': crop_ref,
         'Crop_2022 Col_Name': crop_2022,
         'Crop_2017 Col_Name': crop_2017,
         COL_NAME_PROVINCE + "   ": province_en,
@@ -355,7 +366,7 @@ def revise_by_province(crop_2017, crop_2022, crop_REF,
     if not df_province_ref.empty:
         # if CROP_REF in df_liaoning_ref.columns:
         _df_city_ref = df_province_ref.copy()
-        print(f"--- 使用提供的 '{province_cn}统计年鉴' {crop_REF} 数据作为市级参考值 (B)。 ---")
+        print(f"--- 使用提供的 '{province_cn}统计年鉴' {crop_ref} 数据作为市级参考值 (B)。 ---")
 
     # 其他情况（包括辽宁年鉴缺失时）进行推算
     # elif needs_city_adjustment:
@@ -375,13 +386,13 @@ def revise_by_province(crop_2017, crop_2022, crop_REF,
 
         # --- 内层循环：遍历某个省下面的所有市 ---
         for city_cn in cities_to_process:
-            log_city_entry = revise_by_city(crop_2022, crop_2017, crop_REF,
+            log_city_entry = revise_by_city(crop_2022, crop_2017, crop_ref,
                                             df_city_ref, df_province_data, df_adjusted_all,
                                             province_en, city_cn)
             all_city_adjustment_logs.append(log_city_entry)
 
     else:
-        print(f"   {province_cn} {crop_REF} 市级参考数据缺失或不需要调整，跳过市级循环。")
+        print(f"   {province_cn} {crop_ref} 市级参考数据缺失或不需要调整，跳过市级循环。")
 
     # 修正数据后校验各省不同作物数据总和
     check_province(C8, crop_2022, province_en, df_adjusted_all, log_province_entry)
@@ -790,17 +801,17 @@ def write_df(df, output_file_name, sheet_name: str = None):
         df.to_excel(output_file_name, sheet_name=sheet_name, index=False)
 
     # 使用openpyxl加载刚才保存的Excel文件
-    # wb = load_workbook(excel_file)
-    # for sheet in wb.sheetnames:
-    #     ws = wb[sheet]
-    #     # 自适应调整列宽
-    #     for column_cells in ws.columns:
-    #         length = max(len(str(cell.value)) for cell in column_cells if cell.value is not None)
-    #         ws.column_dimensions[column_cells[0].column_letter].width = length + 2  # 可以根据需要调整额外的宽度
-    #
-    # # 保存调整后的Excel文件
-    # wb.save(excel_file)
-    # wb.close()
+    wb = load_workbook(excel_file)
+    for sheet in wb.sheetnames:
+        ws = wb[sheet]
+        # 自适应调整列宽
+        for column_cells in ws.columns:
+            length = max(len(str(cell.value)) for cell in column_cells if cell.value is not None)
+            ws.column_dimensions[column_cells[0].column_letter].width = length + 2  # 可以根据需要调整额外的宽度
+
+    # 保存调整后的Excel文件
+    wb.save(excel_file)
+    wb.close()
 
 
 if __name__ == '__main__':
