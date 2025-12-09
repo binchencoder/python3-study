@@ -1,7 +1,7 @@
 checker:
-  input_file: /mnt/work/code/extractor/DATA/作物产量数据调整-12.9.xlsx
-  output_log_file: /mnt/work/code/extractor/DATA/2022_crop_sown_area_adjusted_log.xlsx
-  output_adjusted_file: /mnt/work/code/extractor/DATA/2022_crop_sown_area_adjusted_all_crops_and_provinces.xlsx
+  input_file: /mnt/work/code/extractor/DATA/小作物播种面积调整-12.9.xlsx
+  output_log_file: /mnt/work/code/extractor/DATA/小作物播种面积地区数据调整日志.xlsx
+  output_adjusted_file: /mnt/work/code/extractor/DATA/小作物播种面积地区数据调整结果.xlsx
   #  input_file: /Volumes/BinchenCoder/项目/LIULING/小作物播种面积调整-12.8.xlsx
   #  output_log_file: /Volumes/BinchenCoder/项目/LIULING/2022_crop_sown_area_adjusted_log-1.xlsx
   #  output_adjusted_file: /Volumes/BinchenCoder/项目/LIULING/2022_crop_sown_area_adjusted_all_crops_and_provinces-1.xlsx
@@ -19,6 +19,3 @@ ratio:
   RATIO_MIN_2: 0.90
   RATIO_MAX_2: 1.10
   RATIO_MAX_3: 1.50
-
-
-
