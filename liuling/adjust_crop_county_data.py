@@ -9,7 +9,7 @@ from config import Configuration
 
 # 设置日志
 logging.basicConfig(
-    filename="./adjust_crop_data.log",
+    filename="./adjust_crop_county_data.log",
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
     datefmt="%Y/%m/%d %H:%M:%S",
@@ -47,7 +47,7 @@ COLS_CITY = [
 
 # --- 辅助：中英文省份名称映射表 (保持不变) ---
 PROVINCE_MAP = {
-    'Beijing': ':北京',
+    'Beijing': '北京',
     'Tianjin': '天津',
     'Hebei': '河北',
     'Shanxi': '山西',

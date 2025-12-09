@@ -135,7 +135,7 @@ CROP_COLUMN_MAP = {
     'Nitrogen Fertilizer Application(10,000 tons)': ('Nitrogen Fertilizer Application(10,000 tons)', '氮肥'),
     'Phosphate Fertilizer Application(10,000 tons)': ('Phosphate Fertilizer Application(10,000 tons)', '磷肥'),
     'Potassium Fertilizer Application(10,000 tons)': ('Potassium Fertilizer Application(10,000 tons)', '钾肥'),
-    'compound Application(10,000 tons) ': ('compound Application(10,000 tons) ', '复合肥'),
+    'compound Application(10,000 tons) ': ('compound Application(10,000 tons)', '复合肥'),
     'rice_yield(10,000 tons)': ('rice_yield(10,000 tons)', '水稻'),
     'wheat_yield(10,000 tons)': ('wheat_yield(10,000 tons)', '小麦'),
     'maize_yield(10,000 tons)': ('maize_yield(10,000 tons)', '玉米'),
@@ -303,12 +303,6 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
     )
     write_df(df_styled_province_log, output_log_file, sheet_name="省统计年鉴校正日志")
 
-    # 最终检查并输出省份总和
-    # print(f"\n\n#######################################################")
-    # print(f"### 3. 最终省份/作物总和检查 ###")
-    # print(f"#######################################################")
-    # final_check(df_adjusted_all, df_national_ref, provinces_to_process)
-
     # 保存最终结果到 Excel
     df_adjusted_all = df_adjusted_all.dropna(subset=['City', 'Province'], how='all')
     df_province_ref = df_province_ref.dropna(subset=['City', 'Province'], how='all')
@@ -354,6 +348,7 @@ def revise_by_province(crop_2017, crop_2022, crop_ref,
         'Sum City Ref(B)': B_city_sum,
         'Ratio(A/B)': AB_ratio,
         'Status': '',
+        'Check (New Ratio A/B)': '',
     }
 
     # 省下面没有市, 直接跳过
@@ -407,27 +402,27 @@ def revise_by_province(crop_2017, crop_2022, crop_ref,
         df_adjusted_all.loc[condition, crop_ref] = round(
             df_city_ref_base['2017_city_province_sum_ratio'] * A_province_sum, ROUND_DECIMAL)
 
-    sum_source = A_province_sum
-    sum_after = sum(
-        df_adjusted_all[df_adjusted_all[COL_NAME_PROVINCE] == province_cn][crop_ref].tolist()) - sum_source
-    ratio_after_diff = sum_source / sum_after
-
-    log_province_entry['Status'] += f' | Adjusted. New Sum: {sum_after}'
-    if ratio_after_diff > 1.02:
-        logger.error(
-            f"调整完之后校正, Province={province_cn}, Crop={crop_ref}, A_province_sum={A_province_sum}, B_city_sum={B_city_sum}, AB_diff={difference}, sum_source={sum_source}, sum_after={sum_after}, ratio_after_diff={ratio_after_diff}")
-
+    check_province(crop_ref, province_cn, A_province_sum, B_city_sum, df_adjusted_all, log_province_entry)
     return log_province_entry
 
 
-def check_province(C8: float, crop_2022: str, province_en: str, df_adjusted_all, log_province_entry):
-    if '范围内，进行市级调整' in log_province_entry['Status']:
-        new_AO20 = df_adjusted_all[(df_adjusted_all[COL_NAME_PROVINCE] == province_en)][crop_2022].sum()
-        new_AO20 = round(new_AO20, ROUND_DECIMAL)
+def check_province(crop_ref: str, province_cn: str,
+                   A_province_sum: float, B_city_sum: float,
+                   df_adjusted_all,
+                   log_province_entry):
+    if 'Adjustment needed' in log_province_entry['Status']:
+        new_B_city_sum = sum(
+            df_adjusted_all[df_adjusted_all[COL_NAME_PROVINCE] == province_cn][crop_ref].tolist())
+        new_AB_ratio = A_province_sum / new_B_city_sum if new_B_city_sum != 0 else 0
+        new_AB_diff = A_province_sum - new_B_city_sum
 
-        new_ratio_province = new_AO20 / C8 if new_AO20 > 0 and C8 > 0 else 0
-        log_province_entry['Status'] += f' | Adjusted. New Sum: {new_AO20}'
-        log_province_entry['Check (New AO20/C8 Ratio)'] = new_ratio_province
+        log_province_entry['Status'] += f' | Adjusted. New Sum: {new_B_city_sum}'
+        log_province_entry['Check (New Ratio A/B)'] = new_AB_ratio
+        if new_AB_ratio > 1.02:
+            logger.error(
+                f"调整完之后校正, Province={province_cn}, Crop={crop_ref}, A_province_sum={A_province_sum}, "
+                f"B_city_sum={B_city_sum}, AB_diff={new_AB_diff}, sum_source={A_province_sum}, sum_after={new_B_city_sum}, "
+                f"ratio_after_diff={new_AB_diff}")
 
 
 def check_city(df_adjusted_all, B, city_name_in_data, crop_2022, log_entry, province_en):
