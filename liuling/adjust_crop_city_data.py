@@ -127,8 +127,8 @@ CROP_COLUMN_MAP = {
     'vegetable_sown_area(1000 hectares)': ('vegetable_sown_area', '蔬菜'),
     'fruittree_sown_area(1000 hectares)': ('fruittree_sown_area', '果树'),
     'greenfodder_sown_area(1000 hectares)': ('greenfodder_sown_area', '青饲料'),
-    'managedgrass_sown_area(1000 hectares)': ('managedgrass_sown_area(1000 hectares)', '管理草地'),
-    'naturalgrass_sown_area(1000 hectares)': ('naturalgrass_sown_area(1000 hectares)', '天然草地'),
+    'managedgrass_sown_area(1000 hectares)': ('managedgrass_sown_area', '管理草地'),
+    'naturalgrass_sown_area(1000 hectares)': ('naturalgrass_sown_area', '天然草地'),
 
     # 'Agricultural Fertilizer Application (in pure nutrient equivalent)(10,000 tons)': (
     #     'Agricultural Fertilizer Application (in pure nutrient equivalent)(10,000 tons)', '化肥总量'),
