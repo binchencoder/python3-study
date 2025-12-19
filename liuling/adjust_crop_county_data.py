@@ -124,7 +124,7 @@ CROP_COLUMN_MAP = {
     'Nitrogen Fertilizer Application(10,000 tons)': ('Nitrogen Fertilizer Application(10,000 tons)', '氮肥'),
     'Phosphate Fertilizer Application(10,000 tons)': ('Phosphate Fertilizer Application(10,000 tons)', '磷肥'),
     'Potassium Fertilizer Application(10,000 tons)': ('Potassium Fertilizer Application(10,000 tons)', '钾肥'),
-    'compound Application(10,000 tons) ': ('compound Application(10,000 tons)', '复合肥'),
+    'compound Application(10,000 tons)': ('compound Application(10,000 tons)', '复合肥'),
     'rice_yield(10,000 tons)': ('rice_yield(10,000 tons)', '水稻'),
     'wheat_yield(10,000 tons)': ('wheat_yield(10,000 tons)', '小麦'),
     'maize_yield(10,000 tons)': ('maize_yield(10,000 tons)', '玉米'),
