@@ -108,51 +108,64 @@ COLS_PROVINCE_CITY_SUM = [
 # 格式：{ '2022数据中的列名': ('2017数据中的列名', '统计年鉴中的列名') }
 # 注意：2022数据中的列名可能包含单位 '(1000 hectares)'
 CROP_COLUMN_MAP = {
-    # 'nonbeans_sown_area(1000 hectares)': ('nonbeans_sown_area', ''),
-    'rice_sown_area(1000 hectares)': ('rice_sown_area', '水稻'),
-    'wheat_sown_area(1000 hectares)': ('wheat_sown_area', '小麦'),
-    'maize_sown_area(1000 hectares)': ('maize_sown_area', '玉米'),
-    'beans_sown_area(1000 hectares)': ('beans_sown_area', '豆类'),
-    'millet_sown_area(1000 hectares)': ('millet_sown_area', '谷子'),
-    'sorghum_sown_area(1000 hectares)': ('sorghum_sown_area', '高粱'),
-    'othercereals_sown_area(1000 hectares)': ('othercereals_sown_area', '其他杂粮'),
-    'potato_sown_area(1000 hectares)': ('potato_sown_area', '马铃薯'),
-    'peanut_sown_area(1000 hectares)': ('peanut_sown_area', '花生'),
-    'rapeseed_sown_area(1000 hectares)': ('rapeseed_sown_area', '油菜籽'),  # 假设要调整油菜籽
-    'cotton_sown_area(1000 hectares)': ('cotton_sown_area', '棉花'),  # 假设要调整棉花
-    'flax_sown_area(1000 hectares)': ('flax_sown_area', '麻类'),
-    'sugarcane_sown_area(1000 hectares)': ('sugarcane_sown_area', '甘蔗'),
-    'sugarbeet_sown_area(1000 hectares)': ('sugarbeet_sown_area', '甜菜'),
-    'tobacco_sown_area(1000 hectares)': ('tobacco_sown_area', '烟叶'),
-    'vegetable_sown_area(1000 hectares)': ('vegetable_sown_area', '蔬菜'),
-    'fruittree_sown_area(1000 hectares)': ('fruittree_sown_area', '果树'),
-    'greenfodder_sown_area(1000 hectares)': ('greenfodder_sown_area', '青饲料'),
-    'managedgrass_sown_area(1000 hectares)': ('managedgrass_sown_area', '管理草地'),
-    'naturalgrass_sown_area(1000 hectares)': ('naturalgrass_sown_area', '天然草地'),
+    # # 'nonbeans_sown_area(1000 hectares)': ('nonbeans_sown_area', ''),
+    # 'rice_sown_area(1000 hectares)': ('rice_sown_area', '水稻'),
+    # 'wheat_sown_area(1000 hectares)': ('wheat_sown_area', '小麦'),
+    # 'maize_sown_area(1000 hectares)': ('maize_sown_area', '玉米'),
+    # 'beans_sown_area(1000 hectares)': ('beans_sown_area', '豆类'),
+    # 'millet_sown_area(1000 hectares)': ('millet_sown_area', '谷子'),
+    # 'sorghum_sown_area(1000 hectares)': ('sorghum_sown_area', '高粱'),
+    # 'othercereals_sown_area(1000 hectares)': ('othercereals_sown_area', '其他杂粮'),
+    # 'potato_sown_area(1000 hectares)': ('potato_sown_area', '马铃薯'),
+    # 'peanut_sown_area(1000 hectares)': ('peanut_sown_area', '花生'),
+    # 'rapeseed_sown_area(1000 hectares)': ('rapeseed_sown_area', '油菜籽'),  # 假设要调整油菜籽
+    # 'cotton_sown_area(1000 hectares)': ('cotton_sown_area', '棉花'),  # 假设要调整棉花
+    # 'flax_sown_area(1000 hectares)': ('flax_sown_area', '麻类'),
+    # 'sugarcane_sown_area(1000 hectares)': ('sugarcane_sown_area', '甘蔗'),
+    # 'sugarbeet_sown_area(1000 hectares)': ('sugarbeet_sown_area', '甜菜'),
+    # 'tobacco_sown_area(1000 hectares)': ('tobacco_sown_area', '烟叶'),
+    # 'vegetable_sown_area(1000 hectares)': ('vegetable_sown_area', '蔬菜'),
+    # 'fruittree_sown_area(1000 hectares)': ('fruittree_sown_area', '果树'),
+    # 'greenfodder_sown_area(1000 hectares)': ('greenfodder_sown_area', '青饲料'),
+    # 'managedgrass_sown_area(1000 hectares)': ('managedgrass_sown_area', '管理草地'),
+    # 'naturalgrass_sown_area(1000 hectares)': ('naturalgrass_sown_area', '天然草地'),
 
-    # 'Agricultural Fertilizer Application (in pure nutrient equivalent)(10,000 tons)': (
-    #     'Agricultural Fertilizer Application (in pure nutrient equivalent)(10,000 tons)', '化肥总量'),
-    # 'Nitrogen Fertilizer Application(10,000 tons)': ('Nitrogen Fertilizer Application(10,000 tons)', '氮肥'),
-    # 'Phosphate Fertilizer Application(10,000 tons)': ('Phosphate Fertilizer Application(10,000 tons)', '磷肥'),
-    # 'Potassium Fertilizer Application(10,000 tons)': ('Potassium Fertilizer Application(10,000 tons)', '钾肥'),
-    # 'compound Application(10,000 tons) ': ('compound Application(10,000 tons)', '复合肥'),
-    # 'rice_yield(10,000 tons)': ('rice_yield(10,000 tons)', '水稻'),
-    # 'wheat_yield(10,000 tons)': ('wheat_yield(10,000 tons)', '小麦'),
-    # 'maize_yield(10,000 tons)': ('maize_yield(10,000 tons)', '玉米'),
-    # 'millet_yield(10,000 tons)': ('millet_yield(10,000 tons)', '谷子'),
-    # 'sorghum_yield(10,000 tons)': ('sorghum_yield(10,000 tons)', '高粱'),
-    # 'othercereals_yield(10,000 tons)': ('othercereals_yield(10,000 tons)', '其他谷物'),
-    # 'beans_yield(10,000 tons)': ('beans_yield(10,000 tons)', '豆类'),
-    # 'potato_yield(10,000 tons)': ('potato_yield(10,000 tons)', '马铃薯'),
-    # 'peanut_yield(10,000 tons)': ('peanut_yield(10,000 tons)', '花生'),
-    # 'rapeseed_yield(10,000 tons)': ('rapeseed_yield(10,000 tons)', '油菜籽'),
-    # 'cotton_yield(10,000 tons)': ('cotton_yield(10,000 tons)', '棉花'),
-    # 'flax_yield(10,000 tons)': ('flax_yield(10,000 tons)', '麻类'),
-    # 'sugarcane_yield(10,000 tons)': ('sugarcane_yield(10,000 tons)', '甘蔗'),
-    # 'sugarbeet_yield(10,000 tons)': ('sugarbeet_yield(10,000 tons)', '甜菜'),
-    # 'tobacco_yield(10,000 tons)': ('tobacco_yield(10,000 tons)', '烟叶'),
-    # 'vegetable_yield(10,000 tons)': ('vegetable_yield(10,000 tons)', '蔬菜'),
-    # 'fruittree_yield(10,000 tons)': ('fruittree_yield(10,000 tons)', '果树'),
+    'Agricultural Fertilizer Application (in pure nutrient equivalent)(10,000 tons)': (
+        'Agricultural Fertilizer Application (in pure nutrient equivalent)(10,000 tons)', '化肥总量'),
+    'Nitrogen Fertilizer Application(10,000 tons)': ('Nitrogen Fertilizer Application(10,000 tons)', '氮肥'),
+    'Phosphate Fertilizer Application(10,000 tons)': ('Phosphate Fertilizer Application(10,000 tons)', '磷肥'),
+    'Potassium Fertilizer Application(10,000 tons)': ('Potassium Fertilizer Application(10,000 tons)', '钾肥'),
+    'compound Application(10,000 tons) ': ('compound Application(10,000 tons)', '复合肥'),
+    'rice_yield(10,000 tons)': ('rice_yield(10,000 tons)', '水稻'),
+    'wheat_yield(10,000 tons)': ('wheat_yield(10,000 tons)', '小麦'),
+    'maize_yield(10,000 tons)': ('maize_yield(10,000 tons)', '玉米'),
+    'millet_yield(10,000 tons)': ('millet_yield(10,000 tons)', '谷子'),
+    'sorghum_yield(10,000 tons)': ('sorghum_yield(10,000 tons)', '高粱'),
+    'othercereals_yield(10,000 tons)': ('othercereals_yield(10,000 tons)', '其他谷物'),
+    'beans_yield(10,000 tons)': ('beans_yield(10,000 tons)', '豆类'),
+    'potato_yield(10,000 tons)': ('potato_yield(10,000 tons)', '马铃薯'),
+    'peanut_yield(10,000 tons)': ('peanut_yield(10,000 tons)', '花生'),
+    'rapeseed_yield(10,000 tons)': ('rapeseed_yield(10,000 tons)', '油菜籽'),
+    'cotton_yield(10,000 tons)': ('cotton_yield(10,000 tons)', '棉花'),
+    'flax_yield(10,000 tons)': ('flax_yield(10,000 tons)', '麻类'),
+    'sugarcane_yield(10,000 tons)': ('sugarcane_yield(10,000 tons)', '甘蔗'),
+    'sugarbeet_yield(10,000 tons)': ('sugarbeet_yield(10,000 tons)', '甜菜'),
+    'tobacco_yield(10,000 tons)': ('tobacco_yield(10,000 tons)', '烟叶'),
+    'vegetable_yield(10,000 tons)': ('vegetable_yield(10,000 tons)', '蔬菜'),
+    'fruittree_yield(10,000 tons)': ('fruittree_yield(10,000 tons)', '果树'),
+
+    # 'pig': ('pig', '出栏生猪'),
+    # 'dairy': ('dairy', '存栏奶牛'),
+    # 'beefcattle': ('beefcattle', '出栏肉牛'),
+    # 'othercattle': ('othercattle', '存栏其他种类牛'),
+    # 'poultry': ('poultry', '存栏家禽'),
+    # 'sheep_goat': ('sheep_goat', '存栏羊'),
+    # 'horse': ('horse', '存栏马'),
+    # 'mule_donkey': ('mule_donkey', '存栏骡子和驴'),
+    # 'rabbit': ('rabbit', '存栏兔子'),
+    # 'egg': ('egg', '产量蛋类'),
+    # 'milk': ('milk', '产量奶类'),
+    # 'management_fishery': ('management_fishery', '产量淡水产品'),
 
     # 请根据您的实际需求，补充需要进行调整的作物列
 }
@@ -176,6 +189,8 @@ def load_data():
     try:
         # 1. 加载区县数据
         df_2022 = pd.read_excel(input_file, sheet_name="2022-crop-sown area")
+        # df_2022 = pd.read_excel(input_file, sheet_name="2022-animal-datas")
+
         # 排除掉在指定列中全部为 NaN 的行
         # subset=target_columns: 指定只检查这些列
         # how='all': 表示只有当这些列中的值“全部”为 NaN 时才删除该行
@@ -184,11 +199,14 @@ def load_data():
 
         # df_2017 = pd.read_excel(input_file, sheet_name="2017-crop-sown area", usecols=COLS_PROVINCE_CITY_SUM)
         df_2017 = pd.read_excel(input_file, sheet_name="2017-crop-sown area")
+        # df_2017 = pd.read_excel(input_file, sheet_name="2017-animal-datas")
+
         df_2017.rename(columns=COL_NAME_MAP, inplace=True)
         df_2017 = df_2017.dropna(subset=['Province'], how='all')
 
         # 2. 加载国家统计年鉴数据
         df_national_ref = pd.read_excel(input_file, sheet_name="国家统计年鉴小作物种植面积", header=0)
+        # df_national_ref = pd.read_excel(input_file, sheet_name="中国畜牧兽医统计年鉴-分省动物数据", header=0)
         df_national_ref.rename(columns={'省份': COL_NAME_PROVINCE}, inplace=True)
 
         # 3. 尝试加载各省统计年鉴
