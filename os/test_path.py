@@ -10,6 +10,7 @@ if __name__ == '__main__':
     print(f"pdf_path.stem = {pdf_path.stem}")
 
     print(f"pdf_path.name = {pdf_path.name}")
+    print(f"Path.name = {Path('/mnt/work/code/extractor/pdf-extractor/output/Fanning/A').name}")
 
     print(f"os.path.splitext(pdf_path) = {os.path.splitext(pdf_path)}")
     print(f"os.path.split(pdf_path) = {os.path.split(pdf_path)} ")
