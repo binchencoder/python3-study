@@ -184,8 +184,9 @@ def clean_numeric_col(df, col):
     return df
 
 
-def load_data():
+def load_data(config):
     """加载所有数据文件，并尝试加载辽宁省统计年鉴。"""
+    input_file = config.checker['input_file']
     try:
         # 1. 加载区县数据
         df_2022 = pd.read_excel(input_file, sheet_name="2022-crop-sown area")
@@ -242,9 +243,11 @@ def load_data():
         raise e
 
 
-def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, df_province_ref):
-    """循环遍历所有作物和所有省份，执行调整逻辑。"""
+def process_data_for_all_crops_and_provinces(config, df_2022, df_2017, df_national_ref, df_province_ref):
+    output_log_file = config.checker['output_log_file']
+    output_adjusted_file = config.checker['output_adjusted_file']
 
+    """循环遍历所有作物和所有省份，执行调整逻辑。"""
     # 最终调整后的数据副本 (在每个作物循环开始时创建，以便在 df_2022 上进行操作)
     df_adjusted_all = df_province_ref.copy()
     all_city_adjustment_logs = []
@@ -276,7 +279,7 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
             print(f"开始处理 {crop_REF} 在省份: {province_cn} ({province_en}) 的数据")
             print(f"=======================================================")
 
-            log_province_entry = revise_by_province(crop_2017, crop_2022, crop_REF,
+            log_province_entry = revise_by_province(config, crop_2017, crop_2022, crop_REF,
                                                     df_2017, df_adjusted_all,
                                                     province_cn, province_en)
             if log_province_entry is not None:
@@ -335,11 +338,13 @@ def process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, 
     return output_adjusted_file
 
 
-def revise_by_province(crop_2017, crop_2022, crop_ref,
+def revise_by_province(config, crop_2017, crop_2022, crop_ref,
                        df_2017, df_adjusted_all,
                        province_cn, province_en):
     if crop_ref not in df_adjusted_all.columns:
         return None
+
+    ROUND_DECIMAL = config.checker['ROUND_DECIMAL']
 
     # 过滤出 2022 年当前省份的所有区县数据
     # 注意：此处使用 df_adjusted_all，确保上一省份/作物调整的结果得以保留
@@ -420,11 +425,11 @@ def revise_by_province(crop_2017, crop_2022, crop_ref,
         df_adjusted_all.loc[condition, crop_ref] = round(
             df_city_ref_base['2017_city_province_sum_ratio'] * A_province_sum, ROUND_DECIMAL)
 
-    check_province(crop_ref, province_cn, A_province_sum, B_city_sum, df_adjusted_all, log_province_entry)
+    check_province(config, crop_ref, province_cn, A_province_sum, B_city_sum, df_adjusted_all, log_province_entry)
     return log_province_entry
 
 
-def check_province(crop_ref: str, province_cn: str,
+def check_province(config, crop_ref: str, province_cn: str,
                    A_province_sum: float, B_city_sum: float,
                    df_adjusted_all,
                    log_province_entry):
@@ -443,7 +448,9 @@ def check_province(crop_ref: str, province_cn: str,
                 f"ratio_after_diff={new_AB_diff}")
 
 
-def check_city(df_adjusted_all, B, city_name_in_data, crop_2022, log_entry, province_en):
+def check_city(config, df_adjusted_all, B, city_name_in_data, crop_2022, log_entry, province_en):
+    ROUND_DECIMAL = config.checker['ROUND_DECIMAL']
+
     A_new = df_adjusted_all[
         (df_adjusted_all[COL_NAME_CITY] == city_name_in_data) &
         (df_adjusted_all[COL_NAME_PROVINCE] == province_en)
@@ -591,8 +598,7 @@ def write_df(df, output_file_name, sheet_name: str = None):
     wb.save(excel_file)
     wb.close()
 
-
-if __name__ == '__main__':
+def setup():
     """ 初始化配置 """
     _config = Configuration("config.yaml")
 
@@ -614,6 +620,32 @@ if __name__ == '__main__':
     RATIO_MAX_2 = _config.ratio['RATIO_MAX_2']
     RATIO_MAX_3 = _config.ratio['RATIO_MAX_3']
 
+    return _config, input_file, output_log_file, output_adjusted_file
+
+if __name__ == '__main__':
+    # """ 初始化配置 """
+    # _config = Configuration("config.yaml")
+    #
+    # # 输入输出文件路径
+    # input_file = _config.checker['input_file']
+    # output_log_file = _config.checker['output_log_file']
+    # output_adjusted_file = _config.checker['output_adjusted_file']
+    #
+    # # 保留小数位数
+    # ROUND_DECIMAL = _config.checker['ROUND_DECIMAL']
+    #
+    # # 调整比例阈值
+    # RATIO_MIN_PROVINCE = _config.ratio['RATIO_MIN_PROVINCE']
+    # RATIO_MAX_PROVINCE = _config.ratio['RATIO_MAX_PROVINCE']
+    #
+    # RATIO_MIN_1 = _config.ratio['RATIO_MIN_1']
+    # RATIO_MAX_1 = _config.ratio['RATIO_MAX_1']
+    # RATIO_MIN_2 = _config.ratio['RATIO_MIN_2']
+    # RATIO_MAX_2 = _config.ratio['RATIO_MAX_2']
+    # RATIO_MAX_3 = _config.ratio['RATIO_MAX_3']
+
+    _config, input_file, output_log_file, output_adjusted_file = setup()
+
     # --- 运行主程序 ---
-    df_2022, df_2017, df_national_ref, df_province_ref = load_data()
-    output_file = process_data_for_all_crops_and_provinces(df_2022, df_2017, df_national_ref, df_province_ref)
+    df_2022, df_2017, df_national_ref, df_province_ref = load_data(_config)
+    output_file = process_data_for_all_crops_and_provinces(_config, df_2022, df_2017, df_national_ref, df_province_ref)
