@@ -3,6 +3,8 @@ import os
 import shutil
 import stat
 
+from pathlib import Path
+
 """
 https://geek-docs.com/python/python-file-tutorials/181_python_delete_folder.html
 
@@ -15,6 +17,7 @@ logging.basicConfig(
     datefmt="%Y/%m/%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+
 
 # dir = "/Users/binchen/Download/Test"
 
@@ -39,7 +42,7 @@ def remove_directory(directory):
         print("目录删除失败：", e)
 
 
-def file_remove_readonly(func, path, execinfo):
+def remove_file_readonly(func, path, execinfo):
     os.chmod(path, stat.S_IWUSR)  # 修改文件权限
     func(path)
 
@@ -56,7 +59,7 @@ def remove_directory_file(path):
                 os.chmod(itr_file, stat.S_IWUSR)
             os.remove(itr_file)
         else:
-            shutil.rmtree(itr_file, onerror=file_remove_readonly)
+            shutil.rmtree(itr_file, onerror=remove_file_readonly)
 
 
 def list_file(path):
@@ -64,7 +67,15 @@ def list_file(path):
         print(file)
 
 
+def list_dirs(path):
+    target_path = Path(path)
+    # iterdir() 迭代当前目录下所有内容
+    subdirs = [d.name for d in target_path.iterdir() if d.is_dir()]
+    logger.info(f"subdirs: {subdirs}")
+
+
 if __name__ == "__main__":
     # remove_dir("/home/chenbin/data/111/")
     # remove_directory("/home/chenbin/data/111/")
-    list_file("/home/chenbin/data/112/")
+    # list_file("/home/chenbin/data/112/")
+    list_dirs("/Volumes/BinchenCoder/python_workspace/stock")
