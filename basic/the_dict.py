@@ -60,6 +60,16 @@ def append():
     print(f"相加之后的值：", d)
 
 
+def update():
+    a = {
+        'cxr': 3.5
+    }
+    a.update({
+        'father': 'cb'
+    })
+    print(a)
+
+
 if __name__ == '__main__':
     init()
 
@@ -74,3 +84,6 @@ if __name__ == '__main__':
 
     # 相加
     append()
+
+    # 更新
+    update()
